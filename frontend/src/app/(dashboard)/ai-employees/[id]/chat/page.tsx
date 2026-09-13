@@ -17,6 +17,8 @@ import {
   ExternalLink,
   ShieldCheck,
   AlertCircle,
+  BookOpen,
+  ShieldAlert,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { AIEmployee, Conversation, Message, Citation } from '@/types';
@@ -206,7 +208,26 @@ export default function AIEmployeeChatPage() {
                   {employee?.status}
                 </span>
               </div>
-              <p className="text-xs text-slate-400">{employee?.role} • Grounded RAG</p>
+              <div className="flex items-center gap-2 mt-0.5">
+                <p className="text-xs text-slate-400">{employee?.role}</p>
+                {employee?.assigned_knowledge_bases && employee.assigned_knowledge_bases.length > 0 ? (
+                  <div className="hidden sm:flex items-center gap-1.5">
+                    <span className="text-slate-600">•</span>
+                    <span className="text-[11px] text-indigo-300 font-medium flex items-center gap-1 bg-indigo-950/50 border border-indigo-800/40 px-2 py-0.5 rounded">
+                      <BookOpen className="w-3 h-3 text-indigo-400" />
+                      {employee.assigned_knowledge_bases.map((k) => k.name).join(', ')}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="hidden sm:flex items-center gap-1.5">
+                    <span className="text-slate-600">•</span>
+                    <span className="text-[11px] text-amber-400/80 italic flex items-center gap-1 bg-amber-950/30 border border-amber-900/40 px-2 py-0.5 rounded">
+                      <ShieldAlert className="w-3 h-3 text-amber-400" />
+                      Pure Persona Mode
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>

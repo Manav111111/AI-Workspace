@@ -80,6 +80,15 @@ async def test_end_to_end_rag_grounded_conversation_pipeline(client: AsyncClient
     assert chunks_check.status_code == 200
     assert len(chunks_check.json()) >= 1
 
+    # 4.5. Assign Knowledge Base to AI Employee (Knowledge Governance)
+    assign_res = await client.put(
+        f"/api/v1/ai-employees/{employee_id}/knowledge-bases",
+        json={"knowledge_base_ids": [kb_id]},
+        headers=headers,
+    )
+    assert assign_res.status_code == 200
+    assert len(assign_res.json()["knowledge_base_ids"]) == 1
+
     # 5. Create Conversation
     conv_res = await client.post(
         "/api/v1/conversations/",

@@ -176,10 +176,12 @@ class QdrantService:
         company_id: uuid.UUID,
         query_vector: List[float],
         knowledge_base_id: Optional[uuid.UUID] = None,
+        knowledge_base_ids: Optional[List[uuid.UUID]] = None,
         limit: int = 10,
     ) -> List[Dict[str, Any]]:
         """MANDATORY TENANT ISOLATION:
         Searches vectors strictly scoped to the authenticated caller's company_id.
+        Optionally scopes to a list of allowed knowledge_base_ids or a single knowledge_base_id.
         Company A can NEVER retrieve Company B vectors.
         """
         must_conditions: List[qmodels.Condition] = [
@@ -188,7 +190,22 @@ class QdrantService:
                 match=qmodels.MatchValue(value=str(company_id)),
             )
         ]
-        if knowledge_base_id:
+        if knowledge_base_ids:
+            if len(knowledge_base_ids) == 1:
+                must_conditions.append(
+                    qmodels.FieldCondition(
+                        key="knowledge_base_id",
+                        match=qmodels.MatchValue(value=str(knowledge_base_ids[0])),
+                    )
+                )
+            else:
+                must_conditions.append(
+                    qmodels.FieldCondition(
+                        key="knowledge_base_id",
+                        match=qmodels.MatchAny(any=[str(kb_id) for kb_id in knowledge_base_ids]),
+                    )
+                )
+        elif knowledge_base_id:
             must_conditions.append(
                 qmodels.FieldCondition(
                     key="knowledge_base_id",

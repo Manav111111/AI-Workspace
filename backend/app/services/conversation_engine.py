@@ -26,6 +26,7 @@ class ConversationEngineResponse:
     assistant_message: Message
     citations: List[Dict[str, Any]]
     retrieval_count: int
+    retrieval_metadata: Dict[str, Any] = field(default_factory=dict)
     metrics: Dict[str, Any] = field(default_factory=dict)
 
 
@@ -107,18 +108,34 @@ class ConversationEngine:
             if m.id != user_msg.id
         ]
 
-        # 5. Execute Grounded Knowledge Retrieval
+        # 5. Execute Grounded Knowledge Retrieval with AI Employee Scoped Knowledge Access
+        assigned_kbs = getattr(ai_employee, "knowledge_bases", []) or []
+        assigned_kb_ids = [kb.id for kb in assigned_kbs]
+
         retrieval_start = time.perf_counter()
-        retrieved_chunks = await self.retrieval_service.retrieve(
-            company_id=company_id,
-            query=query,
-        )
-        retrieval_latency_ms = round((time.perf_counter() - retrieval_start) * 1000, 2)
-        top_score = retrieved_chunks[0].score if retrieved_chunks else 0.0
+        if assigned_kb_ids:
+            retrieved_chunks = await self.retrieval_service.retrieve(
+                company_id=company_id,
+                query=query,
+                knowledge_base_ids=assigned_kb_ids,
+            )
+            retrieval_latency_ms = round((time.perf_counter() - retrieval_start) * 1000, 2)
+            top_score = retrieved_chunks[0].score if retrieved_chunks else 0.0
+            retrieval_skipped = False
+        else:
+            # ZERO-KNOWLEDGE POLICY: If the AI Employee has 0 assigned knowledge bases,
+            # retrieval is skipped entirely to prevent unauthorized access or cross-department leaks.
+            retrieved_chunks = []
+            retrieval_latency_ms = 0.0
+            top_score = 0.0
+            retrieval_skipped = True
 
         # Improvement #3: Track retrieval metadata for observability
         retrieval_metadata = {
             "query": query,
+            "assigned_kbs_count": len(assigned_kb_ids),
+            "assigned_kb_ids": [str(k) for k in assigned_kb_ids],
+            "retrieval_skipped": retrieval_skipped,
             "chunks_retrieved": len(retrieved_chunks),
             "top_score": round(top_score, 4),
             "retrieval_latency_ms": retrieval_latency_ms,
@@ -217,5 +234,6 @@ class ConversationEngine:
             assistant_message=assistant_msg,
             citations=citations,
             retrieval_count=len(retrieved_chunks),
+            retrieval_metadata=retrieval_metadata,
             metrics=metrics,
         )

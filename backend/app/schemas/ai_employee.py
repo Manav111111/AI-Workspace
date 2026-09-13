@@ -1,8 +1,17 @@
 import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 import uuid
 from pydantic import BaseModel, ConfigDict, Field
 from app.models.ai_employee import AIEmployeeStatus
+
+
+class KnowledgeBaseSummary(BaseModel):
+    id: uuid.UUID
+    name: str
+    description: Optional[str] = None
+    status: str
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AIEmployeeBase(BaseModel):
@@ -18,7 +27,7 @@ class AIEmployeeBase(BaseModel):
 
 
 class AIEmployeeCreate(AIEmployeeBase):
-    pass
+    knowledge_base_ids: Optional[List[uuid.UUID]] = Field(default_factory=list)
 
 
 class AIEmployeeUpdate(BaseModel):
@@ -31,6 +40,7 @@ class AIEmployeeUpdate(BaseModel):
     status: Optional[AIEmployeeStatus] = None
     avatar_config: Optional[Dict[str, Any]] = None
     voice_config: Optional[Dict[str, Any]] = None
+    knowledge_base_ids: Optional[List[uuid.UUID]] = None
 
 
 class AIEmployeeRead(AIEmployeeBase):
@@ -38,5 +48,39 @@ class AIEmployeeRead(AIEmployeeBase):
     company_id: uuid.UUID
     created_at: datetime.datetime
     updated_at: datetime.datetime
+    knowledge_base_ids: List[uuid.UUID] = Field(default_factory=list)
+    assigned_knowledge_bases: List[KnowledgeBaseSummary] = Field(default_factory=list)
 
     model_config = ConfigDict(from_attributes=True)
+
+    @classmethod
+    def from_orm_employee(cls, emp: Any) -> "AIEmployeeRead":
+        """Helper to construct AIEmployeeRead with mapped assigned knowledge bases."""
+        kbs = getattr(emp, "knowledge_bases", []) or []
+        kb_summaries = [
+            KnowledgeBaseSummary(
+                id=kb.id,
+                name=kb.name,
+                description=kb.description,
+                status=kb.status.value if hasattr(kb.status, "value") else str(kb.status),
+            )
+            for kb in kbs
+        ]
+        kb_ids = [kb.id for kb in kbs]
+        return cls(
+            id=emp.id,
+            company_id=emp.company_id,
+            name=emp.name,
+            role=emp.role,
+            description=emp.description,
+            personality=emp.personality,
+            system_prompt=emp.system_prompt,
+            language=emp.language,
+            status=emp.status,
+            avatar_config=emp.avatar_config or {},
+            voice_config=emp.voice_config or {},
+            created_at=emp.created_at,
+            updated_at=emp.updated_at,
+            knowledge_base_ids=kb_ids,
+            assigned_knowledge_bases=kb_summaries,
+        )

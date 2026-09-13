@@ -1,6 +1,7 @@
 from typing import Optional, Sequence
 import uuid
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.ai_employee import AIEmployee
 from app.repositories.base import BaseRepository
@@ -16,9 +17,13 @@ class AIEmployeeRepository(BaseRepository[AIEmployee]):
 
     async def get_by_tenant(self, company_id: uuid.UUID, employee_id: uuid.UUID) -> Optional[AIEmployee]:
         """Fetch an AI Employee strictly scoped to the specified tenant/company."""
-        stmt = select(AIEmployee).where(
-            AIEmployee.id == employee_id,
-            AIEmployee.company_id == company_id,
+        stmt = (
+            select(AIEmployee)
+            .options(selectinload(AIEmployee.knowledge_bases))
+            .where(
+                AIEmployee.id == employee_id,
+                AIEmployee.company_id == company_id,
+            )
         )
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
@@ -32,6 +37,7 @@ class AIEmployeeRepository(BaseRepository[AIEmployee]):
         """List AI Employees strictly scoped to the specified tenant/company."""
         stmt = (
             select(AIEmployee)
+            .options(selectinload(AIEmployee.knowledge_bases))
             .where(AIEmployee.company_id == company_id)
             .order_by(AIEmployee.created_at.desc())
             .offset(skip)

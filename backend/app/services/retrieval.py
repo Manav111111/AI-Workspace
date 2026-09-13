@@ -70,6 +70,7 @@ class RetrievalService:
         company_id: uuid.UUID,
         query: str,
         knowledge_base_id: Optional[uuid.UUID] = None,
+        knowledge_base_ids: Optional[List[uuid.UUID]] = None,
         top_k: Optional[int] = None,
         score_threshold: Optional[float] = None,
     ) -> List[RetrievedChunk]:
@@ -78,7 +79,8 @@ class RetrievalService:
         Args:
             company_id: Verified tenant ID (never trust client input).
             query: User search query.
-            knowledge_base_id: Optional restriction to specific KB.
+            knowledge_base_id: Optional restriction to specific single KB.
+            knowledge_base_ids: Optional restriction to a list of allowed KBs.
             top_k: Number of chunks to return (defaults to RAG_TOP_K).
             score_threshold: Minimum cosine similarity score (defaults to RAG_SCORE_THRESHOLD).
         """
@@ -107,6 +109,7 @@ class RetrievalService:
             company_id=company_id,
             query_vector=query_vector,
             knowledge_base_id=knowledge_base_id,
+            knowledge_base_ids=knowledge_base_ids,
             limit=fetch_limit,
         )
 

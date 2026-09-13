@@ -6,6 +6,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import BaseModel
 
 if TYPE_CHECKING:
+    from app.models.ai_employee import AIEmployee
     from app.models.company import Company
     from app.models.document import Document
 
@@ -37,4 +38,10 @@ class KnowledgeBase(BaseModel):
         "Document",
         back_populates="knowledge_base",
         cascade="all, delete-orphan",
+    )
+    ai_employees: Mapped[List["AIEmployee"]] = relationship(
+        "AIEmployee",
+        secondary="ai_employee_knowledge_bases",
+        back_populates="knowledge_bases",
+        lazy="selectin",
     )

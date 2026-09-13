@@ -3,6 +3,7 @@ from app.models.user import User
 from app.models.company import Company
 from app.models.membership import Membership, MembershipRole
 from app.models.ai_employee import AIEmployee, AIEmployeeStatus
+from app.models.ai_employee_knowledge_base import AIEmployeeKnowledgeBase
 from app.models.knowledge_base import KnowledgeBase, KnowledgeBaseStatus
 from app.models.document import Document, DocumentStatus
 from app.models.document_chunk import DocumentChunk
@@ -18,6 +19,7 @@ __all__ = [
     "MembershipRole",
     "AIEmployee",
     "AIEmployeeStatus",
+    "AIEmployeeKnowledgeBase",
     "KnowledgeBase",
     "KnowledgeBaseStatus",
     "Document",

@@ -48,6 +48,8 @@ export interface AIEmployee {
   voice_config: Record<string, any>;
   created_at: string;
   updated_at: string;
+  knowledge_base_ids?: string[];
+  assigned_knowledge_bases?: KnowledgeBase[];
 }
 
 export interface KnowledgeBase {

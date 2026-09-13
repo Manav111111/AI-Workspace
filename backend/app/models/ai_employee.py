@@ -8,6 +8,7 @@ from app.models.base import BaseModel
 if TYPE_CHECKING:
     from app.models.company import Company
     from app.models.conversation import Conversation
+    from app.models.knowledge_base import KnowledgeBase
 
 
 class AIEmployeeStatus(str, enum.Enum):
@@ -45,4 +46,10 @@ class AIEmployee(BaseModel):
         "Conversation",
         back_populates="ai_employee",
         cascade="all, delete-orphan",
+    )
+    knowledge_bases: Mapped[List["KnowledgeBase"]] = relationship(
+        "KnowledgeBase",
+        secondary="ai_employee_knowledge_bases",
+        back_populates="ai_employees",
+        lazy="selectin",
     )
