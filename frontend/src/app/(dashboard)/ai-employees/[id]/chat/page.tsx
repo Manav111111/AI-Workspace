@@ -19,9 +19,13 @@ import {
   AlertCircle,
   BookOpen,
   ShieldAlert,
+  Wrench,
+  CheckCircle2,
+  XCircle,
+  AlertTriangle,
 } from 'lucide-react';
 import { api } from '@/lib/api';
-import { AIEmployee, Conversation, Message, Citation } from '@/types';
+import { AIEmployee, Conversation, Message, Citation, PendingConfirmation } from '@/types';
 
 export default function AIEmployeeChatPage() {
   const params = useParams();
@@ -37,6 +41,8 @@ export default function AIEmployeeChatPage() {
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedCitation, setSelectedCitation] = useState<Citation | null>(null);
+  const [pendingConfirmation, setPendingConfirmation] = useState<PendingConfirmation | null>(null);
+  const [isConfirming, setIsConfirming] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -165,6 +171,13 @@ export default function AIEmployeeChatPage() {
         response.assistant_message,
       ]);
 
+      // Check for pending tool action confirmation
+      if (response.pending_confirmation) {
+        setPendingConfirmation(response.pending_confirmation);
+      } else {
+        setPendingConfirmation(null);
+      }
+
       // Refresh conversations list to update title
       const updatedConvs = await api.listConversations(employeeId);
       setConversations(updatedConvs);
@@ -172,6 +185,36 @@ export default function AIEmployeeChatPage() {
       setError(err.message || 'Failed to get response from AI Employee');
     } finally {
       setIsSending(false);
+    }
+  };
+
+  const handleConfirmAction = async (confirmed: boolean) => {
+    if (!pendingConfirmation || !activeConvId || isConfirming) return;
+    setIsConfirming(true);
+    setError(null);
+
+    try {
+      const actionId = pendingConfirmation.pending_action_id;
+      const confirmText = confirmed ? 'Yes, proceed with action' : 'No, cancel action';
+
+      // Send confirmation to conversational brain
+      const response = await api.sendMessage(
+        activeConvId,
+        confirmText,
+        actionId,
+        confirmed
+      );
+
+      setMessages((prev) => [
+        ...prev,
+        response.user_message,
+        response.assistant_message,
+      ]);
+      setPendingConfirmation(null);
+    } catch (err: any) {
+      setError(err.message || 'Failed to process confirmation');
+    } finally {
+      setIsConfirming(false);
     }
   };
 
@@ -369,6 +412,27 @@ export default function AIEmployeeChatPage() {
                         <p className="whitespace-pre-wrap">{msg.content}</p>
                       </div>
 
+                      {/* Executed Tools Badge in Assistant Message */}
+                      {!isUser && msg.message_metadata?.tool_calls && Array.isArray(msg.message_metadata.tool_calls) && msg.message_metadata.tool_calls.length > 0 && (
+                        <div className="pt-1">
+                          <div className="flex flex-wrap gap-1.5 items-center">
+                            <span className="text-[10px] text-emerald-400/80 font-mono font-medium flex items-center gap-1">
+                              <Wrench className="w-3 h-3" />
+                              Tools:
+                            </span>
+                            {msg.message_metadata.tool_calls.map((tc: any, idx: number) => (
+                              <span
+                                key={idx}
+                                className="px-2 py-0.5 rounded bg-emerald-950/60 border border-emerald-800/50 text-emerald-300 text-[10px] font-mono flex items-center gap-1"
+                              >
+                                <CheckCircle2 className="w-2.5 h-2.5 text-emerald-400" />
+                                {tc.name || tc.tool_name || 'action'}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
                       {/* Grounded Sources / Citations */}
                       {!isUser && msg.citations && msg.citations.length > 0 && (
                         <div className="pt-1">
@@ -410,6 +474,50 @@ export default function AIEmployeeChatPage() {
                   </div>
                 );
               })
+            )}
+
+            {/* Pending Tool Write Action Confirmation Card */}
+            {pendingConfirmation && (
+              <div className="max-w-2xl mx-auto my-4 p-5 rounded-2xl bg-amber-950/30 border-2 border-amber-500/40 shadow-xl space-y-3">
+                <div className="flex items-center gap-2.5 text-amber-400 font-semibold text-sm">
+                  <AlertTriangle className="w-5 h-5 text-amber-400 animate-bounce" />
+                  <span>Action Requires Your Confirmation</span>
+                </div>
+
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  {pendingConfirmation.message ||
+                    `The AI Employee is requesting permission to execute write operation "${pendingConfirmation.tool_name}".`}
+                </p>
+
+                <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800 font-mono text-[11px] text-slate-300 space-y-1">
+                  <div className="text-amber-400 font-bold">Tool: {pendingConfirmation.tool_name}</div>
+                  <pre className="text-slate-400 overflow-x-auto whitespace-pre-wrap">
+                    {JSON.stringify(pendingConfirmation.arguments, null, 2)}
+                  </pre>
+                </div>
+
+                <div className="flex items-center justify-end gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => handleConfirmAction(false)}
+                    disabled={isConfirming}
+                    className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold flex items-center gap-1.5 transition-colors disabled:opacity-50"
+                  >
+                    <XCircle className="w-4 h-4 text-rose-400" />
+                    <span>Cancel Action</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleConfirmAction(true)}
+                    disabled={isConfirming}
+                    className="px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold flex items-center gap-1.5 shadow-md shadow-amber-500/20 transition-all disabled:opacity-50"
+                  >
+                    <CheckCircle2 className="w-4 h-4 text-slate-950" />
+                    <span>{isConfirming ? 'Executing...' : 'Confirm & Execute'}</span>
+                  </button>
+                </div>
+              </div>
             )}
 
             {/* Typing Indicator */}

@@ -108,18 +108,22 @@ async def send_message(
     tenant: TenantContext = Depends(get_tenant_context),
     session: AsyncSession = Depends(get_db),
 ) -> ChatResponse:
-    """Sends a user message, runs grounded RAG retrieval, and generates an AI Employee response."""
+    """Sends a user message, runs agent orchestration (RAG + assigned tools), and generates an AI Employee response."""
     engine = ConversationEngine(session)
     engine_resp = await engine.respond(
         company_id=tenant.company_id,
         conversation_id=id,
         user_query=payload.content,
         user_id=tenant.user_id,
+        pending_action_id=payload.pending_action_id,
+        confirm_action=payload.confirm_action,
     )
 
     return ChatResponse(
         user_message=MessageResponse.model_validate(engine_resp.user_message),
         assistant_message=MessageResponse.model_validate(engine_resp.assistant_message),
         citations=engine_resp.citations,
+        tool_calls=engine_resp.tool_calls,
+        pending_confirmation=engine_resp.pending_confirmation,
         metrics=engine_resp.metrics,
     )

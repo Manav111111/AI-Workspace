@@ -45,6 +45,17 @@ class AIEmployeeService:
         assigned_kbs = []
         if data.knowledge_base_ids:
             assigned_kbs = await self._resolve_and_validate_kbs(company_id, data.knowledge_base_ids)
+        # Handle initial tool assignments
+        assigned_tools_objs = []
+        if getattr(data, "tools", None):
+            from app.models.ai_employee_tool import AIEmployeeTool
+            from app.services.agent.tool_registry import tool_registry
+            registered = {t.name for t in tool_registry.list_available_tools()}
+            valid_tools = [name for name in set(data.tools) if name in registered]
+            assigned_tools_objs = [
+                AIEmployeeTool(company_id=company_id, tool_name=t)
+                for t in valid_tools
+            ]
 
         employee = AIEmployee(
             company_id=company_id,
@@ -58,6 +69,7 @@ class AIEmployeeService:
             avatar_config=data.avatar_config or {},
             voice_config=data.voice_config or {},
             knowledge_bases=assigned_kbs,
+            assigned_tools=assigned_tools_objs,
         )
         created = await self.repo.create(employee)
         await self.session.commit()
@@ -92,6 +104,19 @@ class AIEmployeeService:
             kb_ids = update_data.pop("knowledge_base_ids")
             if kb_ids is not None:
                 employee.knowledge_bases = await self._resolve_and_validate_kbs(company_id, kb_ids)
+
+        # Handle tool assignment update if specified
+        if "tools" in update_data:
+            tool_names = update_data.pop("tools")
+            if tool_names is not None:
+                from app.models.ai_employee_tool import AIEmployeeTool
+                from app.services.agent.tool_registry import tool_registry
+                registered = {t.name for t in tool_registry.list_available_tools()}
+                valid_tools = [name for name in set(tool_names) if name in registered]
+                employee.assigned_tools = [
+                    AIEmployeeTool(company_id=company_id, tool_name=t)
+                    for t in valid_tools
+                ]
 
         for key, value in update_data.items():
             if value is not None:

@@ -27,6 +27,8 @@ class ConversationEngineResponse:
     citations: List[Dict[str, Any]]
     retrieval_count: int
     retrieval_metadata: Dict[str, Any] = field(default_factory=dict)
+    tool_calls: List[Dict[str, Any]] = field(default_factory=list)
+    pending_confirmation: Optional[Dict[str, Any]] = None
     metrics: Dict[str, Any] = field(default_factory=dict)
 
 
@@ -36,9 +38,8 @@ class ConversationEngine:
     Coordinates:
     - Multi-tenant security boundary
     - Safe message persistence (User message persisted BEFORE LLM call)
-    - Grounded vector retrieval with zero-retrieval safeguards
-    - Context & prompt injection defense assembly
-    - LLM invocation with timeout and retry handling
+    - Agent Orchestrator invocation (combines RAG + assigned business tools + memory)
+    - Tool execution with tenant isolation and confirmation lifecycle
     - Citation tracking and observability logging
     """
 
@@ -63,12 +64,14 @@ class ConversationEngine:
         conversation_id: uuid.UUID,
         user_query: str,
         user_id: Optional[uuid.UUID] = None,
+        pending_action_id: Optional[uuid.UUID] = None,
+        confirm_action: bool = False,
     ) -> ConversationEngineResponse:
         total_start = time.perf_counter()
 
         # 1. Query Validation
         query = user_query.strip()
-        if not query:
+        if not query and not pending_action_id:
             raise ValidationException("Message content cannot be empty")
         if len(query) > 2000:
             raise ValidationException("Message content exceeds maximum allowed length (2000 characters)")
@@ -85,118 +88,62 @@ class ConversationEngine:
         if not ai_employee:
             raise NotFoundException("AI Employee associated with this conversation was not found")
 
-        # 3. Improvement #1: Persist the USER message BEFORE calling the LLM
-        # This guarantees user query is never lost if external LLM times out or fails
+        # 3. Persist the USER message BEFORE calling orchestrator/LLM
         user_msg = await self.message_repo.create(
             conversation_id=conversation_id,
             company_id=company_id,
             role=MessageRole.USER,
-            content=query,
-            metadata={"user_id": str(user_id) if user_id else None},
+            content=query if query else ("Confirmed action" if confirm_action else "Cancelled action"),
+            metadata={
+                "user_id": str(user_id) if user_id else None,
+                "pending_action_id": str(pending_action_id) if pending_action_id else None,
+            },
         )
 
-        # 4. Fetch recent conversation history (excluding the message just added)
+        # 4. Fetch recent conversation history
         history_records = await self.message_repo.get_recent_history(
             conversation_id=conversation_id,
             company_id=company_id,
             limit=settings.CONVERSATION_HISTORY_MESSAGES + 1,
         )
-        # Filter out the newly created message from history list
         history_formatted = [
             {"role": m.role.value.lower(), "content": m.content}
             for m in history_records
             if m.id != user_msg.id
         ]
 
-        # 5. Execute Grounded Knowledge Retrieval with AI Employee Scoped Knowledge Access
-        assigned_kbs = getattr(ai_employee, "knowledge_bases", []) or []
-        assigned_kb_ids = [kb.id for kb in assigned_kbs]
-
-        retrieval_start = time.perf_counter()
-        if assigned_kb_ids:
-            retrieved_chunks = await self.retrieval_service.retrieve(
-                company_id=company_id,
-                query=query,
-                knowledge_base_ids=assigned_kb_ids,
-            )
-            retrieval_latency_ms = round((time.perf_counter() - retrieval_start) * 1000, 2)
-            top_score = retrieved_chunks[0].score if retrieved_chunks else 0.0
-            retrieval_skipped = False
-        else:
-            # ZERO-KNOWLEDGE POLICY: If the AI Employee has 0 assigned knowledge bases,
-            # retrieval is skipped entirely to prevent unauthorized access or cross-department leaks.
-            retrieved_chunks = []
-            retrieval_latency_ms = 0.0
-            top_score = 0.0
-            retrieval_skipped = True
-
-        # Improvement #3: Track retrieval metadata for observability
-        retrieval_metadata = {
-            "query": query,
-            "assigned_kbs_count": len(assigned_kb_ids),
-            "assigned_kb_ids": [str(k) for k in assigned_kb_ids],
-            "retrieval_skipped": retrieval_skipped,
-            "chunks_retrieved": len(retrieved_chunks),
-            "top_score": round(top_score, 4),
-            "retrieval_latency_ms": retrieval_latency_ms,
-        }
-
-        # 6. Context & Prompt Assembly with Zero-Retrieval Safeguard (Improvement #2)
-        has_context = len(retrieved_chunks) > 0
-        context_text = self.context_builder.build_context(retrieved_chunks) if has_context else ""
-
-        llm_messages = PromptBuilder.build_chat_messages(
-            employee_name=ai_employee.name,
-            role=ai_employee.role,
-            personality=ai_employee.personality,
-            custom_system_prompt=ai_employee.system_prompt,
-            context_text=context_text,
-            has_context=has_context,
-            conversation_history=history_formatted,
-            current_user_query=query,
+        # 5. Delegate to Agent Orchestrator (combines RAG + assigned tools)
+        from app.services.agent.orchestrator import AgentOrchestrator
+        orchestrator = AgentOrchestrator(
+            session=self.session,
+            llm_provider=self.llm_provider,
+            retrieval_service=self.retrieval_service,
+            context_builder=self.context_builder,
         )
 
-        # 7. Invoke LLM Provider
-        llm_start = time.perf_counter()
-        try:
-            llm_response = await self.llm_provider.generate(
-                messages=llm_messages,
-                temperature=settings.LLM_TEMPERATURE,
-                max_tokens=settings.LLM_MAX_TOKENS,
-            )
-        except Exception as e:
-            logger.error(
-                f"LLM invocation failure for tenant {company_id}, employee {ai_employee.id}: {e}",
-                exc_info=True,
-            )
-            raise
+        agent_res = await orchestrator.execute(
+            company_id=company_id,
+            ai_employee=ai_employee,
+            conversation_id=conversation_id,
+            user_query=query,
+            conversation_history=history_formatted,
+            user_id=user_id,
+            pending_action_id=pending_action_id,
+            confirm_action=confirm_action,
+        )
 
-        llm_latency_ms = round((time.perf_counter() - llm_start) * 1000, 2)
         total_latency_ms = round((time.perf_counter() - total_start) * 1000, 2)
 
-        # 8. Build Citations (Only from legitimately retrieved chunks)
-        citations: List[Dict[str, Any]] = []
-        if has_context:
-            for c in retrieved_chunks:
-                citations.append({
-                    "chunk_id": str(c.chunk_id),
-                    "document_id": str(c.document_id),
-                    "document_name": c.source or "Document",
-                    "page_number": c.page_number,
-                    "header_path": c.header_path,
-                    "score": round(c.score, 3),
-                    "preview": c.text[:200] + "..." if len(c.text) > 200 else c.text,
-                })
-
-        # 9. Persist Assistant Response in PostgreSQL
+        # 6. Persist Assistant Response in PostgreSQL
         assistant_metadata = {
-            "retrieval": retrieval_metadata,
-            "llm": {
-                "model": llm_response.model,
-                "usage": llm_response.usage,
-                "finish_reason": llm_response.finish_reason,
-                "llm_latency_ms": llm_latency_ms,
+            "retrieval": {
+                "chunks_count": len(agent_res.retrieved_chunks),
             },
+            "tools": {
+                "calls_count": len(agent_res.tool_calls_executed),
+                "calls": agent_res.tool_calls_executed,
+            },
+            "pending_confirmation": agent_res.pending_confirmation,
             "total_latency_ms": total_latency_ms,
         }
 
@@ -204,36 +151,30 @@ class ConversationEngine:
             conversation_id=conversation_id,
             company_id=company_id,
             role=MessageRole.ASSISTANT,
-            content=llm_response.content,
-            citations=citations,
+            content=agent_res.content,
+            citations=agent_res.citations,
             metadata=assistant_metadata,
         )
 
-        # 10. Update Conversation Title on First Message
+        # 7. Update Conversation Title on First Message
         if conversation.title == "New Conversation" or conversation.title.startswith("Chat with"):
             clean_title = query[:40] + ("..." if len(query) > 40 else "")
-            await self.conversation_repo.update_title(conversation_id, company_id, clean_title)
+            if clean_title:
+                await self.conversation_repo.update_title(conversation_id, company_id, clean_title)
 
-        # 11. Structured Logging for Observability
         logger.info(
-            f"Chat turn complete | company={company_id} | employee={ai_employee.id} "
-            f"| conv={conversation_id} | retrieved={len(retrieved_chunks)} | top_score={top_score:.3f} "
-            f"| ret_lat={retrieval_latency_ms}ms | llm_lat={llm_latency_ms}ms | total_lat={total_latency_ms}ms"
+            f"Agent chat turn complete | company={company_id} | employee={ai_employee.id} "
+            f"| conv={conversation_id} | tools={len(agent_res.tool_calls_executed)} "
+            f"| chunks={len(agent_res.retrieved_chunks)} | total_lat={total_latency_ms}ms"
         )
-
-        metrics = {
-            "retrieval_latency_ms": retrieval_latency_ms,
-            "llm_latency_ms": llm_latency_ms,
-            "total_latency_ms": total_latency_ms,
-            "chunks_retrieved": len(retrieved_chunks),
-            "model": llm_response.model,
-        }
 
         return ConversationEngineResponse(
             user_message=user_msg,
             assistant_message=assistant_msg,
-            citations=citations,
-            retrieval_count=len(retrieved_chunks),
-            retrieval_metadata=retrieval_metadata,
-            metrics=metrics,
+            citations=agent_res.citations,
+            retrieval_count=len(agent_res.retrieved_chunks),
+            retrieval_metadata=agent_res.retrieval_metadata,
+            tool_calls=agent_res.tool_calls_executed,
+            pending_confirmation=agent_res.pending_confirmation,
+            metrics=agent_res.metrics,
         )

@@ -19,7 +19,10 @@ class AIEmployeeRepository(BaseRepository[AIEmployee]):
         """Fetch an AI Employee strictly scoped to the specified tenant/company."""
         stmt = (
             select(AIEmployee)
-            .options(selectinload(AIEmployee.knowledge_bases))
+            .options(
+                selectinload(AIEmployee.knowledge_bases),
+                selectinload(AIEmployee.assigned_tools),
+            )
             .where(
                 AIEmployee.id == employee_id,
                 AIEmployee.company_id == company_id,
@@ -37,7 +40,10 @@ class AIEmployeeRepository(BaseRepository[AIEmployee]):
         """List AI Employees strictly scoped to the specified tenant/company."""
         stmt = (
             select(AIEmployee)
-            .options(selectinload(AIEmployee.knowledge_bases))
+            .options(
+                selectinload(AIEmployee.knowledge_bases),
+                selectinload(AIEmployee.assigned_tools),
+            )
             .where(AIEmployee.company_id == company_id)
             .order_by(AIEmployee.created_at.desc())
             .offset(skip)

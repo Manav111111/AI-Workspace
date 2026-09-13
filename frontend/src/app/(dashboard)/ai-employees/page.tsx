@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
-import { AIEmployee, AIEmployeeStatus, KnowledgeBase } from '@/types';
+import { AIEmployee, AIEmployeeStatus, KnowledgeBase, ToolDefinition } from '@/types';
 import {
   Bot,
   Plus,
@@ -22,11 +22,15 @@ import {
   Layers,
   CheckSquare,
   Square,
+  Wrench,
+  ShieldCheck,
+  FileCheck,
 } from 'lucide-react';
 
 export default function AIEmployeesPage() {
   const [employees, setEmployees] = useState<AIEmployee[]>([]);
   const [allKnowledgeBases, setAllKnowledgeBases] = useState<KnowledgeBase[]>([]);
+  const [allTools, setAllTools] = useState<ToolDefinition[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -44,17 +48,20 @@ export default function AIEmployeesPage() {
   const [language, setLanguage] = useState('en');
   const [status, setStatus] = useState<AIEmployeeStatus>('DRAFT');
   const [selectedKbIds, setSelectedKbIds] = useState<string[]>([]);
+  const [selectedToolNames, setSelectedToolNames] = useState<string[]>([]);
 
   const loadData = async () => {
     setLoading(true);
     setError(null);
     try {
-      const [empData, kbData] = await Promise.all([
+      const [empData, kbData, toolData] = await Promise.all([
         api.getAIEmployees(),
         api.getKnowledgeBases().catch(() => []),
+        api.getTools().catch(() => []),
       ]);
       setEmployees(empData);
       setAllKnowledgeBases(kbData);
+      setAllTools(toolData);
     } catch (err: any) {
       setError(err.message || 'Failed to fetch data');
     } finally {
@@ -76,6 +83,7 @@ export default function AIEmployeesPage() {
     setLanguage('en');
     setStatus('DRAFT');
     setSelectedKbIds([]);
+    setSelectedToolNames(['product_search', 'order_lookup']); // Default safe READ tools
     setIsModalOpen(true);
   };
 
@@ -92,6 +100,10 @@ export default function AIEmployeesPage() {
       emp.knowledge_base_ids ||
       (emp.assigned_knowledge_bases ? emp.assigned_knowledge_bases.map((k) => k.id) : []);
     setSelectedKbIds(assignedIds);
+    const assignedToolList =
+      emp.tool_names ||
+      (emp.assigned_tools ? emp.assigned_tools.map((t) => t.tool_name) : []);
+    setSelectedToolNames(assignedToolList);
     setIsModalOpen(true);
   };
 
@@ -101,12 +113,26 @@ export default function AIEmployeesPage() {
     );
   };
 
+  const toggleToolSelection = (toolName: string) => {
+    setSelectedToolNames((prev) =>
+      prev.includes(toolName) ? prev.filter((n) => n !== toolName) : [...prev, toolName]
+    );
+  };
+
   const selectAllKbs = () => {
     setSelectedKbIds(allKnowledgeBases.map((k) => k.id));
   };
 
   const clearAllKbs = () => {
     setSelectedKbIds([]);
+  };
+
+  const selectAllTools = () => {
+    setSelectedToolNames(allTools.map((t) => t.name));
+  };
+
+  const clearAllTools = () => {
+    setSelectedToolNames([]);
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -123,15 +149,16 @@ export default function AIEmployeesPage() {
       language,
       status,
       knowledge_base_ids: selectedKbIds,
+      tools: selectedToolNames,
     };
 
     try {
       if (editingEmployee) {
         await api.updateAIEmployee(editingEmployee.id, payload);
-        setSuccess(`Updated AI Employee "${name}" with ${selectedKbIds.length} assigned knowledge bases.`);
+        setSuccess(`Updated AI Employee "${name}" with ${selectedKbIds.length} KBs and ${selectedToolNames.length} tools.`);
       } else {
         await api.createAIEmployee(payload);
-        setSuccess(`Created AI Employee "${name}" with ${selectedKbIds.length} assigned knowledge bases.`);
+        setSuccess(`Created AI Employee "${name}" with ${selectedKbIds.length} KBs and ${selectedToolNames.length} tools.`);
       }
       setIsModalOpen(false);
       loadData();
@@ -288,6 +315,37 @@ export default function AIEmployeesPage() {
                     <div className="text-[11px] text-amber-400/80 bg-amber-950/20 border border-amber-900/40 px-2 py-1 rounded flex items-center gap-1.5 mt-1">
                       <ShieldAlert className="w-3 h-3 text-amber-400 shrink-0" />
                       <span>No knowledge bases assigned (Pure Persona)</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Assigned Tool Capabilities Badge Section */}
+                <div className="mt-2.5 pt-2.5 border-t border-slate-800/60">
+                  <div className="flex items-center justify-between text-xs mb-1.5">
+                    <span className="text-slate-300 font-medium flex items-center gap-1.5">
+                      <Wrench className="w-3.5 h-3.5 text-emerald-400" />
+                      Assigned Tools:
+                    </span>
+                    <span className="text-[11px] text-slate-400 font-mono">
+                      {emp.tools?.length || emp.assigned_tools?.length || 0} active
+                    </span>
+                  </div>
+
+                  {(emp.tools && emp.tools.length > 0) || (emp.assigned_tools && emp.assigned_tools.length > 0) ? (
+                    <div className="flex flex-wrap gap-1.5 mt-1">
+                      {(emp.tools || emp.assigned_tools?.map((t) => t.tool_name) || []).map((toolName) => (
+                        <span
+                          key={toolName}
+                          className="px-2 py-0.5 rounded-md bg-emerald-950/60 border border-emerald-800/50 text-emerald-300 text-[10px] font-mono flex items-center gap-1"
+                        >
+                          <ShieldCheck className="w-2.5 h-2.5 text-emerald-400" />
+                          {toolName}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-[11px] text-slate-400 bg-slate-800/40 border border-slate-700/40 px-2 py-0.5 rounded flex items-center gap-1.5 mt-1">
+                      <span>No tools assigned (Read-only chat)</span>
                     </div>
                   )}
                 </div>
@@ -499,6 +557,97 @@ export default function AIEmployeesPage() {
                             }`}
                           >
                             {isSelected ? 'ACCESS GRANTED' : 'NO ACCESS'}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* TOOL CAPABILITIES ACCESS CHECKLIST */}
+              <div className="p-3.5 rounded-lg bg-slate-800/50 border border-slate-700/80 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-slate-200 flex items-center gap-1.5">
+                    <Wrench className="w-4 h-4 text-emerald-400" />
+                    Agent Capabilities & Tools (Action Boundary)
+                  </label>
+                  {allTools.length > 0 && (
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={selectAllTools}
+                        className="text-[11px] text-emerald-400 hover:text-emerald-300 font-medium"
+                      >
+                        Select All
+                      </button>
+                      <span className="text-slate-600">•</span>
+                      <button
+                        type="button"
+                        onClick={clearAllTools}
+                        className="text-[11px] text-slate-400 hover:text-slate-300"
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <p className="text-[11px] text-slate-400">
+                  Select tools this employee can execute. READ actions run automatically; WRITE actions require human confirmation. Unassigned tools cannot be invoked.
+                </p>
+
+                {allTools.length === 0 ? (
+                  <div className="text-center py-3 bg-slate-900/60 rounded-lg border border-dashed border-slate-800 text-xs text-slate-400">
+                    No tools registered in the platform yet.
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                    {allTools.map((t) => {
+                      const isSelected = selectedToolNames.includes(t.name);
+                      const isWrite = t.permission === 'WRITE';
+                      return (
+                        <div
+                          key={t.name}
+                          onClick={() => toggleToolSelection(t.name)}
+                          className={`flex items-start justify-between p-2.5 rounded-lg border cursor-pointer transition-all ${
+                            isSelected
+                              ? 'bg-emerald-950/30 border-emerald-500/50 text-white'
+                              : 'bg-slate-900/40 border-slate-800 text-slate-300 hover:border-slate-700'
+                          }`}
+                        >
+                          <div className="flex items-start gap-2.5">
+                            {isSelected ? (
+                              <CheckSquare className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                            ) : (
+                              <Square className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />
+                            )}
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <p className="text-xs font-mono font-semibold text-emerald-300">{t.name}</p>
+                                <span
+                                  className={`text-[9px] px-1.5 py-0.2 rounded font-bold uppercase tracking-wider ${
+                                    isWrite
+                                      ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                                      : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+                                  }`}
+                                >
+                                  {isWrite ? 'Write • Confirmation' : 'Read • Auto'}
+                                </span>
+                              </div>
+                              <p className="text-[10px] text-slate-400 mt-0.5 leading-snug">
+                                {t.description}
+                              </p>
+                            </div>
+                          </div>
+                          <span
+                            className={`text-[9px] px-1.5 py-0.5 rounded font-mono shrink-0 ml-2 ${
+                              isSelected
+                                ? 'bg-emerald-500/20 text-emerald-300'
+                                : 'bg-slate-800 text-slate-500'
+                            }`}
+                          >
+                            {isSelected ? 'ENABLED' : 'DISABLED'}
                           </span>
                         </div>
                       );

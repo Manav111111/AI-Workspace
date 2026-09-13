@@ -50,6 +50,9 @@ export interface AIEmployee {
   updated_at: string;
   knowledge_base_ids?: string[];
   assigned_knowledge_bases?: KnowledgeBase[];
+  tool_names?: string[];
+  tools?: string[];
+  assigned_tools?: AIEmployeeTool[];
 }
 
 export interface KnowledgeBase {
@@ -129,6 +132,76 @@ export interface Citation {
   preview?: string | null;
 }
 
+export interface ToolDefinition {
+  name: string;
+  description: string;
+  permission: 'READ' | 'WRITE';
+  input_schema: Record<string, any>;
+}
+
+export interface AIEmployeeTool {
+  id: string;
+  company_id?: string;
+  ai_employee_id: string;
+  tool_name: string;
+  created_at: string;
+}
+
+export interface PendingToolAction {
+  id: string;
+  company_id: string;
+  ai_employee_id: string;
+  conversation_id: string;
+  tool_name: string;
+  validated_arguments: Record<string, any>;
+  status: 'PENDING' | 'CONFIRMED' | 'REJECTED' | 'EXPIRED';
+  expires_at: string;
+  created_at: string;
+}
+
+export interface PendingConfirmation {
+  pending_action_id: string;
+  tool_name: string;
+  arguments: Record<string, any>;
+  message?: string;
+}
+
+export interface Order {
+  id: string;
+  company_id: string;
+  order_number: string;
+  customer_identifier: string;
+  status: string;
+  items: Array<{ sku: string; name: string; qty: number; price: number }>;
+  total: number;
+  tracking_number?: string | null;
+  created_at: string;
+}
+
+export interface Lead {
+  id: string;
+  company_id: string;
+  name: string;
+  email: string;
+  phone?: string | null;
+  interest?: string | null;
+  source: string;
+  status: string;
+  created_at: string;
+}
+
+export interface SupportTicket {
+  id: string;
+  company_id: string;
+  ticket_number: string;
+  customer_email: string;
+  subject: string;
+  description: string;
+  status: string;
+  priority: string;
+  created_at: string;
+}
+
 export interface Message {
   id: string;
   conversation_id: string;
@@ -136,6 +209,7 @@ export interface Message {
   role: 'USER' | 'ASSISTANT' | 'SYSTEM';
   content: string;
   citations: Citation[];
+  message_metadata?: Record<string, any>;
   created_at: string;
 }
 
@@ -143,5 +217,7 @@ export interface ChatResponse {
   user_message: Message;
   assistant_message: Message;
   citations: Citation[];
+  tool_calls: Array<Record<string, any>>;
+  pending_confirmation?: PendingConfirmation | null;
   metrics: Record<string, any>;
 }

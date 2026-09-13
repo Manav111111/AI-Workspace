@@ -33,7 +33,9 @@ class CitationResponse(BaseModel):
 
 
 class MessageCreate(BaseModel):
-    content: str = Field(..., min_length=1, max_length=2000, description="User message content")
+    content: str = Field(default="", max_length=2000, description="User message content")
+    pending_action_id: Optional[uuid.UUID] = Field(default=None, description="Optional pending action ID to confirm/cancel")
+    confirm_action: bool = Field(default=False, description="Whether to confirm (True) or cancel (False) the pending action")
 
 
 class MessageResponse(BaseModel):
@@ -43,6 +45,7 @@ class MessageResponse(BaseModel):
     role: str
     content: str
     citations: List[Dict[str, Any]] = Field(default_factory=list)
+    message_metadata: Dict[str, Any] = Field(default_factory=dict)
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
@@ -52,4 +55,6 @@ class ChatResponse(BaseModel):
     user_message: MessageResponse
     assistant_message: MessageResponse
     citations: List[CitationResponse] = Field(default_factory=list)
+    tool_calls: List[Dict[str, Any]] = Field(default_factory=list)
+    pending_confirmation: Optional[Dict[str, Any]] = None
     metrics: Dict[str, Any] = Field(default_factory=dict)

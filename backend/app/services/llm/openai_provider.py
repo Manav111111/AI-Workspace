@@ -46,6 +46,7 @@ class OpenAIProvider(LLMProvider):
         messages: List[Dict[str, str]],
         temperature: float = 0.2,
         max_tokens: int = 1000,
+        tools: Optional[List[Dict[str, Any]]] = None,
     ) -> LLMResponse:
         headers = {
             "Content-Type": "application/json",
@@ -53,12 +54,15 @@ class OpenAIProvider(LLMProvider):
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"
 
-        payload = {
+        payload: Dict[str, Any] = {
             "model": self.model,
             "messages": messages,
             "temperature": temperature,
             "max_tokens": max_tokens,
         }
+        if tools:
+            payload["tools"] = tools
+            payload["tool_choice"] = "auto"
 
         url = f"{self.base_url}/chat/completions"
         max_attempts = 2  # 1 initial + 1 controlled retry for transient errors
@@ -99,15 +103,18 @@ class OpenAIProvider(LLMProvider):
                         raise LLMException("LLM returned empty choices in response", status_code=502)
 
                     choice = choices[0]
-                    content = choice.get("message", {}).get("content", "")
+                    message_obj = choice.get("message", {})
+                    content = message_obj.get("content") or ""
                     finish_reason = choice.get("finish_reason")
                     usage = data.get("usage")
+                    tool_calls = message_obj.get("tool_calls")
 
                     return LLMResponse(
                         content=content,
                         model=data.get("model", self.model),
                         usage=usage,
                         finish_reason=finish_reason,
+                        tool_calls=tool_calls,
                     )
 
                 except (httpx.TimeoutException, asyncio.TimeoutError) as te:

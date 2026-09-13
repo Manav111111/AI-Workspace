@@ -53,3 +53,9 @@ class AIEmployee(BaseModel):
         back_populates="ai_employees",
         lazy="selectin",
     )
+    assigned_tools = relationship(
+        "AIEmployeeTool",
+        back_populates="ai_employee",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )

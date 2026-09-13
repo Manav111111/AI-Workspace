@@ -10,6 +10,7 @@ class LLMResponse:
     model: str
     usage: Optional[Dict[str, Any]] = None
     finish_reason: Optional[str] = None
+    tool_calls: Optional[List[Dict[str, Any]]] = None
 
 
 class LLMProvider(ABC):
@@ -23,6 +24,7 @@ class LLMProvider(ABC):
         messages: List[Dict[str, str]],
         temperature: float = 0.2,
         max_tokens: int = 1000,
+        tools: Optional[List[Dict[str, Any]]] = None,
     ) -> LLMResponse:
         """Generates a non-streaming grounded response for the provided message sequence."""
         pass

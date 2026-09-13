@@ -28,6 +28,7 @@ class AIEmployeeBase(BaseModel):
 
 class AIEmployeeCreate(AIEmployeeBase):
     knowledge_base_ids: Optional[List[uuid.UUID]] = Field(default_factory=list)
+    tools: Optional[List[str]] = Field(default_factory=list)
 
 
 class AIEmployeeUpdate(BaseModel):
@@ -41,6 +42,7 @@ class AIEmployeeUpdate(BaseModel):
     avatar_config: Optional[Dict[str, Any]] = None
     voice_config: Optional[Dict[str, Any]] = None
     knowledge_base_ids: Optional[List[uuid.UUID]] = None
+    tools: Optional[List[str]] = None
 
 
 class AIEmployeeRead(AIEmployeeBase):
@@ -50,12 +52,13 @@ class AIEmployeeRead(AIEmployeeBase):
     updated_at: datetime.datetime
     knowledge_base_ids: List[uuid.UUID] = Field(default_factory=list)
     assigned_knowledge_bases: List[KnowledgeBaseSummary] = Field(default_factory=list)
+    tools: List[str] = Field(default_factory=list)
 
     model_config = ConfigDict(from_attributes=True)
 
     @classmethod
     def from_orm_employee(cls, emp: Any) -> "AIEmployeeRead":
-        """Helper to construct AIEmployeeRead with mapped assigned knowledge bases."""
+        """Helper to construct AIEmployeeRead with mapped assigned knowledge bases and tools."""
         kbs = getattr(emp, "knowledge_bases", []) or []
         kb_summaries = [
             KnowledgeBaseSummary(
@@ -67,6 +70,8 @@ class AIEmployeeRead(AIEmployeeBase):
             for kb in kbs
         ]
         kb_ids = [kb.id for kb in kbs]
+        assigned_tools = getattr(emp, "assigned_tools", []) or []
+        tool_names = [t.tool_name for t in assigned_tools]
         return cls(
             id=emp.id,
             company_id=emp.company_id,
@@ -83,4 +88,5 @@ class AIEmployeeRead(AIEmployeeBase):
             updated_at=emp.updated_at,
             knowledge_base_ids=kb_ids,
             assigned_knowledge_bases=kb_summaries,
+            tools=tool_names,
         )

@@ -10,6 +10,18 @@ from app.models.document_chunk import DocumentChunk
 from app.models.conversation import Conversation
 from app.models.message import Message, MessageRole
 
+from app.models.ai_employee_tool import AIEmployeeTool
+from app.models.pending_tool_action import PendingToolAction, PendingActionStatus
+from app.models.business_entities import (
+    Order,
+    OrderStatus,
+    Lead,
+    SupportTicket,
+    TicketPriority,
+    TicketStatus,
+    ToolExecution,
+)
+
 __all__ = [
     "Base",
     "BaseModel",
@@ -20,6 +32,16 @@ __all__ = [
     "AIEmployee",
     "AIEmployeeStatus",
     "AIEmployeeKnowledgeBase",
+    "AIEmployeeTool",
+    "PendingToolAction",
+    "PendingActionStatus",
+    "Order",
+    "OrderStatus",
+    "Lead",
+    "SupportTicket",
+    "TicketPriority",
+    "TicketStatus",
+    "ToolExecution",
     "KnowledgeBase",
     "KnowledgeBaseStatus",
     "Document",
