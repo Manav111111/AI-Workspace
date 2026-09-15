@@ -76,6 +76,7 @@
   // 3. Widget Runtime State
   var state = {
     isOpen: false,
+    mode: 'chat', // 'chat' | 'voice'
     publicConfig: null,
     sessionToken: null,
     sessionExpiresAt: null,
@@ -85,6 +86,12 @@
     errorMessage: null,
     pendingConfirmation: null,
     expandedCitationIndex: null,
+    // Voice Mode State (Phase 5)
+    voiceStatus: 'idle', // 'idle' | 'connecting' | 'listening' | 'transcribing' | 'thinking' | 'speaking'
+    voiceTranscript: '',
+    isRecording: false,
+    audioQueue: [],
+    isPlayingAudio: false,
   };
 
   // 4. Create Host Container & Shadow Root for CSS Isolation
@@ -260,6 +267,163 @@
     .close-btn:hover {
       background: rgba(255, 255, 255, 0.1);
       color: #ffffff;
+    }
+
+    /* Mode Switcher in Header */
+    .mode-switch-wrap {
+      display: flex;
+      align-items: center;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      padding: 2px;
+      gap: 2px;
+    }
+
+    .mode-btn {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      font-size: 11.5px;
+      font-weight: 500;
+      padding: 3px 10px;
+      border-radius: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s ease;
+    }
+
+    .mode-btn.active {
+      background: var(--brand-color, #4f46e5);
+      color: #ffffff;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+    }
+
+    /* Voice Mode Container */
+    .voice-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 20px;
+      background: radial-gradient(circle at 50% 30%, rgba(79, 70, 229, 0.15), transparent 70%), #090e1a;
+      text-align: center;
+      position: relative;
+    }
+
+    .voice-status-pill {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 4px 12px;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.07);
+      color: #94a3b8;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .voice-status-pill.speaking {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border-color: rgba(52, 211, 153, 0.3);
+    }
+
+    .voice-status-pill.listening {
+      background: rgba(239, 68, 68, 0.15);
+      color: #f87171;
+      border-color: rgba(248, 113, 113, 0.3);
+    }
+
+    .voice-status-pill.thinking {
+      background: rgba(245, 158, 11, 0.15);
+      color: #fbbf24;
+      border-color: rgba(251, 191, 36, 0.3);
+    }
+
+    .voice-avatar-visualizer {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, rgba(79, 70, 229, 0.8), rgba(129, 140, 248, 0.5));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 35px rgba(79, 70, 229, 0.4);
+      position: relative;
+      margin-bottom: 24px;
+      transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .voice-avatar-visualizer.pulsing {
+      animation: avtaarVoicePulse 1.8s infinite ease-in-out;
+    }
+
+    @keyframes avtaarVoicePulse {
+      0% { transform: scale(1); box-shadow: 0 0 25px rgba(79, 70, 229, 0.3); }
+      50% { transform: scale(1.08); box-shadow: 0 0 45px rgba(79, 70, 229, 0.6); }
+      100% { transform: scale(1); box-shadow: 0 0 25px rgba(79, 70, 229, 0.3); }
+    }
+
+    .voice-transcript-preview {
+      min-height: 48px;
+      max-height: 90px;
+      overflow-y: auto;
+      font-size: 13.5px;
+      color: #cbd5e1;
+      line-height: 1.45;
+      padding: 8px 14px;
+      background: rgba(15, 23, 42, 0.6);
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      width: 100%;
+      margin-bottom: 24px;
+      word-break: break-word;
+    }
+
+    .voice-mic-btn {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: var(--brand-color, #4f46e5);
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 8px 20px -4px rgba(79, 70, 229, 0.5);
+      transition: all 0.2s ease;
+      outline: none;
+    }
+
+    .voice-mic-btn:hover {
+      transform: scale(1.06);
+    }
+
+    .voice-mic-btn.recording {
+      background: #dc2626;
+      border-color: #f87171;
+      box-shadow: 0 0 25px rgba(220, 38, 38, 0.6);
+      animation: avtaarMicPulse 1.2s infinite;
+    }
+
+    @keyframes avtaarMicPulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.08); }
+    }
+
+    .voice-hint {
+      font-size: 11px;
+      color: #64748b;
+      margin-top: 12px;
     }
 
     /* Message Body */
@@ -605,22 +769,55 @@
           <div class="role-subtitle" id="avtaar-role">Autonomous Assistant</div>
         </div>
       </div>
-      <button class="close-btn" id="avtaar-close" aria-label="Close chat">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="18" y1="6" x2="6" y2="18"></line>
-          <line x1="6" y1="6" x2="18" y2="18"></line>
-        </svg>
-      </button>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <div class="mode-switch-wrap">
+          <button class="mode-btn active" id="btn-mode-chat">Chat</button>
+          <button class="mode-btn" id="btn-mode-voice">Voice</button>
+        </div>
+        <button class="close-btn" id="avtaar-close" aria-label="Close chat">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
     </div>
-    <div class="chat-messages" id="avtaar-messages"></div>
-    <div class="chat-footer">
-      <input type="text" class="chat-input" id="avtaar-input" placeholder="Type your message..." />
-      <button class="send-btn" id="avtaar-send" aria-label="Send message">
-        <svg viewBox="0 0 24 24">
-          <line x1="22" y1="2" x2="11" y2="13"></line>
-          <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+    
+    <!-- Text Mode View -->
+    <div id="view-text-mode" style="display: flex; flex-direction: column; flex: 1; overflow: hidden;">
+      <div class="chat-messages" id="avtaar-messages"></div>
+      <div class="chat-footer">
+        <input type="text" class="chat-input" id="avtaar-input" placeholder="Type your message..." />
+        <button class="send-btn" id="avtaar-send" aria-label="Send message">
+          <svg viewBox="0 0 24 24">
+            <line x1="22" y1="2" x2="11" y2="13"></line>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Voice Mode View -->
+    <div id="view-voice-mode" class="voice-panel" style="display: none;">
+      <div class="voice-status-pill" id="voice-status-pill">IDLE</div>
+      <div class="voice-avatar-visualizer" id="voice-visualizer">
+        <svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+          <line x1="12" y1="19" x2="12" y2="23"></line>
+          <line x1="8" y1="23" x2="16" y2="23"></line>
+        </svg>
+      </div>
+      <div class="voice-transcript-preview" id="voice-transcript">Press microphone to speak with your AI employee...</div>
+      <button class="voice-mic-btn" id="voice-mic-btn" aria-label="Toggle Microphone">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+          <line x1="12" y1="19" x2="12" y2="23"></line>
+          <line x1="8" y1="23" x2="16" y2="23"></line>
         </svg>
       </button>
+      <div class="voice-hint" id="voice-hint">Click mic to start • Click again to send • Click while AI speaks to barge-in</div>
     </div>
   `;
 
@@ -636,6 +833,14 @@
   var nameElement = shadow.getElementById('avtaar-name');
   var roleElement = shadow.getElementById('avtaar-role');
   var avatarBadge = shadow.getElementById('avtaar-avatar');
+  var btnModeChat = shadow.getElementById('btn-mode-chat');
+  var btnModeVoice = shadow.getElementById('btn-mode-voice');
+  var viewTextMode = shadow.getElementById('view-text-mode');
+  var viewVoiceMode = shadow.getElementById('view-voice-mode');
+  var voiceStatusPill = shadow.getElementById('voice-status-pill');
+  var voiceVisualizer = shadow.getElementById('voice-visualizer');
+  var voiceTranscriptEl = shadow.getElementById('voice-transcript');
+  var voiceMicBtn = shadow.getElementById('voice-mic-btn');
 
   // 7. Security: HTTP Client using only Authorization: Bearer <session_token>
   function apiRequest(path, options) {
@@ -1009,6 +1214,253 @@
     }
   };
 
-  // 13. Initialize configuration
+  // =========================================================================
+  // 13. Real-Time Voice Streaming Client (Phase 5)
+  // =========================================================================
+  var voiceWs = null;
+  var mediaRecorder = null;
+  var audioStream = null;
+  var audioContext = null;
+  var currentAudioSource = null;
+
+  function updateVoiceUI(status, transcriptText) {
+    state.voiceStatus = status;
+    voiceStatusPill.className = 'voice-status-pill ' + status;
+    voiceStatusPill.textContent = status.toUpperCase();
+
+    if (transcriptText !== undefined) {
+      state.voiceTranscript = transcriptText;
+      voiceTranscriptEl.textContent = transcriptText || 'Listening...';
+    }
+
+    if (status === 'speaking') {
+      voiceVisualizer.classList.add('pulsing');
+    } else {
+      voiceVisualizer.classList.remove('pulsing');
+    }
+  }
+
+  function getWsVoiceUrl() {
+    var wsProto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    // Derive WS host from apiBase
+    try {
+      var urlObj = new URL(apiBase);
+      var proto = urlObj.protocol === 'https:' ? 'wss:' : 'ws:';
+      return proto + '//' + urlObj.host + urlObj.pathname.replace(/\/api\/v1\/?$/, '') + '/api/v1/voice/stream';
+    } catch (e) {
+      return wsProto + '//' + window.location.host + '/api/v1/voice/stream';
+    }
+  }
+
+  function connectVoiceWebSocket() {
+    return ensureSession().then(function (token) {
+      if (voiceWs && voiceWs.readyState === WebSocket.OPEN) {
+        return voiceWs;
+      }
+
+      var wsUrl = getWsVoiceUrl();
+      voiceWs = new WebSocket(wsUrl);
+      updateVoiceUI('connecting', 'Connecting voice runtime...');
+
+      voiceWs.onopen = function () {
+        // Authenticate as first frame
+        voiceWs.send(JSON.stringify({ type: 'auth', token: token }));
+      };
+
+      voiceWs.onmessage = function (event) {
+        try {
+          var data = JSON.parse(event.data);
+          handleVoiceWsMessage(data);
+        } catch (err) {
+          console.error('[Avtaar Voice WS] Parse error:', err);
+        }
+      };
+
+      voiceWs.onclose = function () {
+        updateVoiceUI('idle', 'Voice session closed. Click mic to speak.');
+      };
+
+      voiceWs.onerror = function (err) {
+        console.error('[Avtaar Voice WS] Error:', err);
+        updateVoiceUI('idle', 'Voice connection error.');
+      };
+
+      return voiceWs;
+    });
+  }
+
+  function handleVoiceWsMessage(data) {
+    if (data.type === 'auth_ok') {
+      updateVoiceUI('idle', 'Ready to listen. Click mic to speak.');
+    } else if (data.type === 'status') {
+      updateVoiceUI(data.state);
+    } else if (data.type === 'transcript') {
+      updateVoiceUI('transcribing', '“' + data.text + '”');
+      // Append user message to shared conversation history
+      if (data.is_final && data.text) {
+        state.messages.push({
+          role: 'USER',
+          content: data.text,
+          created_at: new Date().toISOString(),
+        });
+        renderMessages();
+      }
+    } else if (data.type === 'assistant_message') {
+      state.messages.push({
+        role: 'ASSISTANT',
+        content: data.text,
+        citations: data.citations || [],
+        tool_activity: data.tool_activity || [],
+        created_at: new Date().toISOString(),
+      });
+      renderMessages();
+      updateVoiceUI('speaking', data.text);
+    } else if (data.type === 'audio_chunk') {
+      playVoiceAudioChunk(data.audio_base64);
+    } else if (data.type === 'interrupted') {
+      stopVoiceAudioPlayback();
+      updateVoiceUI('listening', 'Listening to you...');
+    }
+  }
+
+  function playVoiceAudioChunk(base64Audio) {
+    try {
+      if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      var binaryStr = atob(base64Audio);
+      var len = binaryStr.length;
+      var bytes = new Uint8Array(len);
+      for (var i = 0; i < len; i++) {
+        bytes[i] = binaryStr.charCodeAt(i);
+      }
+
+      audioContext.decodeAudioData(bytes.buffer, function (buffer) {
+        var source = audioContext.createBufferSource();
+        source.buffer = buffer;
+        source.connect(audioContext.destination);
+        currentAudioSource = source;
+        source.start(0);
+      }, function (decodeErr) {
+        // Fallback for audio element
+        var audioEl = new Audio('data:audio/mp3;base64,' + base64Audio);
+        audioEl.play().catch(function () {});
+      });
+    } catch (e) {
+      console.warn('[Avtaar Voice] Audio playback error:', e);
+    }
+  }
+
+  function stopVoiceAudioPlayback() {
+    if (currentAudioSource) {
+      try {
+        currentAudioSource.stop();
+      } catch (e) {}
+      currentAudioSource = null;
+    }
+  }
+
+  function startRecording() {
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
+      audioStream = stream;
+      var options = { mimeType: 'audio/webm;codecs=opus' };
+      if (!MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+        options = { mimeType: 'audio/webm' };
+      }
+
+      mediaRecorder = new MediaRecorder(stream, options);
+      var recordedChunks = [];
+
+      mediaRecorder.ondataavailable = function (e) {
+        if (e.data && e.data.size > 0) {
+          recordedChunks.push(e.data);
+        }
+      };
+
+      mediaRecorder.onstop = function () {
+        var blob = new Blob(recordedChunks, { type: 'audio/webm' });
+        var reader = new FileReader();
+        reader.onloadend = function () {
+          var base64data = reader.result.split(',')[1];
+          if (voiceWs && voiceWs.readyState === WebSocket.OPEN) {
+            voiceWs.send(JSON.stringify({
+              type: 'audio_utterance',
+              data: base64data,
+              format: 'webm',
+            }));
+          }
+        };
+        reader.readAsDataURL(blob);
+      };
+
+      // If AI is speaking, send user_speaking frame for barge-in
+      if (state.voiceStatus === 'speaking' && voiceWs && voiceWs.readyState === WebSocket.OPEN) {
+        voiceWs.send(JSON.stringify({ type: 'user_speaking' }));
+        stopVoiceAudioPlayback();
+      }
+
+      mediaRecorder.start(250);
+      state.isRecording = true;
+      voiceMicBtn.classList.add('recording');
+      updateVoiceUI('listening', 'Listening... speak now');
+    }).catch(function (err) {
+      console.error('[Avtaar Voice] Microphone access denied:', err);
+      updateVoiceUI('idle', 'Microphone permission denied.');
+    });
+  }
+
+  function stopRecording() {
+    if (mediaRecorder && state.isRecording) {
+      mediaRecorder.stop();
+      state.isRecording = false;
+      voiceMicBtn.classList.remove('recording');
+      updateVoiceUI('transcribing', 'Processing your speech...');
+
+      if (audioStream) {
+        audioStream.getTracks().forEach(function (t) { t.stop(); });
+        audioStream = null;
+      }
+    }
+  }
+
+  // Voice Mode Button Interactions
+  btnModeChat.onclick = function () {
+    state.mode = 'chat';
+    btnModeChat.classList.add('active');
+    btnModeVoice.classList.remove('active');
+    viewTextMode.style.display = 'flex';
+    viewVoiceMode.style.display = 'none';
+  };
+
+  btnModeVoice.onclick = function () {
+    state.mode = 'voice';
+    btnModeVoice.classList.add('active');
+    btnModeChat.classList.remove('active');
+    viewTextMode.style.display = 'none';
+    viewVoiceMode.style.display = 'flex';
+    connectVoiceWebSocket();
+  };
+
+  voiceMicBtn.onclick = function () {
+    if (state.voiceStatus === 'speaking') {
+      // Barge-in interruption
+      if (voiceWs && voiceWs.readyState === WebSocket.OPEN) {
+        voiceWs.send(JSON.stringify({ type: 'user_speaking' }));
+      }
+      stopVoiceAudioPlayback();
+      updateVoiceUI('idle', 'Interrupted. Click mic to speak.');
+      return;
+    }
+
+    if (!state.isRecording) {
+      connectVoiceWebSocket().then(function () {
+        startRecording();
+      });
+    } else {
+      stopRecording();
+    }
+  };
+
+  // 14. Initialize configuration
   fetchPublicConfig();
 })();

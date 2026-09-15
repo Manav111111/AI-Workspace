@@ -57,6 +57,12 @@ export default function AIEmployeesPage() {
   const [selectedKbIds, setSelectedKbIds] = useState<string[]>([]);
   const [selectedToolNames, setSelectedToolNames] = useState<string[]>([]);
 
+  // Phase 5: Voice Configuration Form State
+  const [voiceEnabled, setVoiceEnabled] = useState(true);
+  const [voiceId, setVoiceId] = useState('alloy');
+  const [voiceSpeed, setVoiceSpeed] = useState(1.0);
+  const [availableVoices, setAvailableVoices] = useState<import('@/types').VoiceDefinition[]>([]);
+
   // Phase 4: Embed & Widget Customization Modal State
   const [isEmbedModalOpen, setIsEmbedModalOpen] = useState(false);
   const [activeEmbedEmployee, setActiveEmbedEmployee] = useState<AIEmployee | null>(null);
@@ -80,14 +86,18 @@ export default function AIEmployeesPage() {
     setLoading(true);
     setError(null);
     try {
-      const [empData, kbData, toolData] = await Promise.all([
+      const [empData, kbData, toolData, voiceData] = await Promise.all([
         api.getAIEmployees(),
         api.getKnowledgeBases().catch(() => []),
         api.getTools().catch(() => []),
+        api.getAvailableVoices().catch(() => ({ provider: 'mock', voices: [] })),
       ]);
       setEmployees(empData);
       setAllKnowledgeBases(kbData);
       setAllTools(toolData);
+      if (voiceData && voiceData.voices) {
+        setAvailableVoices(voiceData.voices);
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to fetch data');
     } finally {
@@ -110,6 +120,9 @@ export default function AIEmployeesPage() {
     setStatus('DRAFT');
     setSelectedKbIds([]);
     setSelectedToolNames(['product_search', 'order_lookup']); // Default safe READ tools
+    setVoiceEnabled(true);
+    setVoiceId(availableVoices.length > 0 ? availableVoices[0].id : 'alloy');
+    setVoiceSpeed(1.0);
     setIsModalOpen(true);
   };
 
@@ -130,6 +143,11 @@ export default function AIEmployeesPage() {
       emp.tool_names ||
       (emp.assigned_tools ? emp.assigned_tools.map((t) => t.tool_name) : []);
     setSelectedToolNames(assignedToolList);
+
+    const vConfig = emp.voice_config || {};
+    setVoiceEnabled(vConfig.enabled !== false);
+    setVoiceId(vConfig.voice_id || (availableVoices.length > 0 ? availableVoices[0].id : 'alloy'));
+    setVoiceSpeed(typeof vConfig.speed === 'number' ? vConfig.speed : 1.0);
     setIsModalOpen(true);
   };
 
@@ -176,6 +194,11 @@ export default function AIEmployeesPage() {
       status,
       knowledge_base_ids: selectedKbIds,
       tools: selectedToolNames,
+      voice_config: {
+        enabled: voiceEnabled,
+        voice_id: voiceId,
+        speed: voiceSpeed,
+      },
     };
 
     try {
@@ -858,6 +881,81 @@ export default function AIEmployeesPage() {
                         </div>
                       );
                     })}
+                  </div>
+                )}
+              </div>
+
+              {/* PHASE 5: VOICE AI CONFIGURATION */}
+              <div className="p-3.5 rounded-lg bg-slate-800/50 border border-slate-700/80 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-slate-200 flex items-center gap-1.5">
+                    <Volume2 className="w-4 h-4 text-violet-400" />
+                    Voice AI Interface (STT & TTS)
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={voiceEnabled}
+                      onChange={(e) => setVoiceEnabled(e.target.checked)}
+                      className="sr-only"
+                    />
+                    <div className={`w-8 h-4 rounded-full transition-colors relative ${voiceEnabled ? 'bg-violet-600' : 'bg-slate-700'}`}>
+                      <div className={`w-3 h-3 rounded-full bg-white absolute top-0.5 transition-transform ${voiceEnabled ? 'left-4.5' : 'left-0.5'}`} />
+                    </div>
+                    <span className="text-[11px] text-slate-300 font-medium">
+                      {voiceEnabled ? 'Enabled' : 'Disabled'}
+                    </span>
+                  </label>
+                </div>
+
+                <p className="text-[11px] text-slate-400">
+                  Enables real-time bidirectional voice conversations via widget using the identical AI Employee brain, knowledge bases, and tools.
+                </p>
+
+                {voiceEnabled && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                    <div>
+                      <label className="block text-[11px] font-medium text-slate-300 mb-1">
+                        Synthesized Voice
+                      </label>
+                      <select
+                        value={voiceId}
+                        onChange={(e) => setVoiceId(e.target.value)}
+                        className="w-full px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:ring-2 focus:ring-violet-500"
+                      >
+                        {availableVoices.length > 0 ? (
+                          availableVoices.map((v) => (
+                            <option key={v.id} value={v.id}>
+                              {v.name} ({v.gender || 'neutral'})
+                            </option>
+                          ))
+                        ) : (
+                          <>
+                            <option value="alloy">Alloy (neutral)</option>
+                            <option value="echo">Echo (male)</option>
+                            <option value="fable">Fable (female)</option>
+                            <option value="onyx">Onyx (male)</option>
+                            <option value="nova">Nova (female)</option>
+                            <option value="shimmer">Shimmer (female)</option>
+                          </>
+                        )}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-medium text-slate-300 mb-1">
+                        Speech Rate ({voiceSpeed}x)
+                      </label>
+                      <input
+                        type="range"
+                        min="0.8"
+                        max="1.2"
+                        step="0.05"
+                        value={voiceSpeed}
+                        onChange={(e) => setVoiceSpeed(parseFloat(e.target.value))}
+                        className="w-full accent-violet-500 cursor-pointer mt-1"
+                      />
+                    </div>
                   </div>
                 )}
               </div>

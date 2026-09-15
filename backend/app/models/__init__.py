@@ -23,6 +23,7 @@ from app.models.business_entities import (
 )
 from app.models.public_session import PublicChatSession
 from app.models.public_usage import PublicUsageEvent
+from app.models.voice_session import VoiceSession, VoiceSessionStatus
 
 __all__ = [
     "Base",
@@ -54,4 +55,6 @@ __all__ = [
     "MessageRole",
     "PublicChatSession",
     "PublicUsageEvent",
+    "VoiceSession",
+    "VoiceSessionStatus",
 ]

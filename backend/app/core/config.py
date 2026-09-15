@@ -50,6 +50,17 @@ class Settings(BaseSettings):
     LLM_MAX_TOKENS: int = 1000
     LLM_TIMEOUT_SECONDS: int = 60
 
+    # Voice AI Configuration (Phase 5)
+    VOICE_STT_PROVIDER: str = "mock"  # "mock" | "openai" | "deepgram"
+    VOICE_TTS_PROVIDER: str = "mock"  # "mock" | "openai" | "elevenlabs"
+    DEEPGRAM_API_KEY: Union[str, None] = None
+    ELEVENLABS_API_KEY: Union[str, None] = None
+    VOICE_MAX_SESSION_DURATION_SECONDS: int = 1800  # 30 mins
+    VOICE_MAX_AUDIO_CHUNK_SIZE_BYTES: int = 1024 * 1024  # 1 MB
+    VOICE_MAX_CONCURRENT_SESSIONS_PER_TENANT: int = 10
+    VOICE_RATE_LIMIT_PER_MINUTE: int = 30
+    VOICE_TTS_BUFFER_MIN_CHARS: int = 35
+
     # CORS
     BACKEND_CORS_ORIGINS: Union[List[str], str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
 

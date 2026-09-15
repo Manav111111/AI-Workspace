@@ -1,4 +1,4 @@
-# AI Employee Platform (Phases 0-4 Complete)
+# AI Employee Platform (Phases 0-5 Complete)
 
 An enterprise-ready, multi-tenant SaaS platform that enables companies to create, train, and deploy autonomous, company-specific AI employees.
 
@@ -12,7 +12,8 @@ The long-term vision of this platform is to provide an end-to-end operational AI
 3. **Conversations & Grounded RAG Chat (Phase 2 - Complete)**: Decoupled conversational brain, prompt injection defenses, grounded answering with citations, conversation persistence, and interactive testing console.
 4. **Autonomous Agent Capabilities & Tool Lifecycle (Phase 3 - Complete)**: Action boundaries, scoped product search, order lookup, and write-tool human-in-the-loop confirmation lifecycles.
 5. **Public AI Employee Website Widget Runtime (Phase 4 - Complete)**: Standalone embeddable `widget.js` (Shadow DOM isolated, zero React runtime required on host site), anonymous session security, bearer token auth, rate limiting, domain restriction integration boundaries, and dashboard embed customizer.
-6. **Real-Time Voice AI (Phase 5 - Upcoming)**: Low-latency speech-to-text (STT) and text-to-speech (TTS) streaming interaction re-using the conversational brain.
+6. **Real-Time Voice AI (Phase 5 - Complete)**: Low-latency bidirectional speech-to-text (STT) and text-to-speech (TTS) streaming via WebSocket, barge-in / interruption support, dual-mode STT abstraction, smart sentence segmentation, voice widget interface, and telemetry/billing tracking reusing the identical conversational AI brain.
+7. **Digital Human & 3D Avatar (Phase 6 - Upcoming)**: Embodied conversational avatar consuming the unified AI Employee Brain, Text Chat, and Voice AI runtime.
 
 
 ---

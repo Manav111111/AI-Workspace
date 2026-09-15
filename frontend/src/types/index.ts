@@ -261,3 +261,15 @@ export interface PublicEmployeeConfig {
   widget_config: Record<string, any>;
 }
 
+export interface VoiceDefinition {
+  id: string;
+  name: string;
+  gender?: string;
+  description?: string;
+}
+
+export interface AvailableVoicesResponse {
+  provider: string;
+  voices: VoiceDefinition[];
+}
+
