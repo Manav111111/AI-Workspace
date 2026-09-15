@@ -32,6 +32,7 @@ import {
   Check,
   Palette,
   Eye,
+  User,
 } from 'lucide-react';
 
 export default function AIEmployeesPage() {
@@ -62,6 +63,12 @@ export default function AIEmployeesPage() {
   const [voiceId, setVoiceId] = useState('alloy');
   const [voiceSpeed, setVoiceSpeed] = useState(1.0);
   const [availableVoices, setAvailableVoices] = useState<import('@/types').VoiceDefinition[]>([]);
+
+  // Phase 6: 3D Avatar Configuration Form State
+  const [avatarEnabled, setAvatarEnabled] = useState(true);
+  const [avatarPreset, setAvatarPreset] = useState('executive_sarah');
+  const [avatarExpression, setAvatarExpression] = useState('approachable');
+  const [avatarFraming, setAvatarFraming] = useState('bust');
 
   // Phase 4: Embed & Widget Customization Modal State
   const [isEmbedModalOpen, setIsEmbedModalOpen] = useState(false);
@@ -123,6 +130,10 @@ export default function AIEmployeesPage() {
     setVoiceEnabled(true);
     setVoiceId(availableVoices.length > 0 ? availableVoices[0].id : 'alloy');
     setVoiceSpeed(1.0);
+    setAvatarEnabled(true);
+    setAvatarPreset('executive_sarah');
+    setAvatarExpression('approachable');
+    setAvatarFraming('bust');
     setIsModalOpen(true);
   };
 
@@ -148,6 +159,12 @@ export default function AIEmployeesPage() {
     setVoiceEnabled(vConfig.enabled !== false);
     setVoiceId(vConfig.voice_id || (availableVoices.length > 0 ? availableVoices[0].id : 'alloy'));
     setVoiceSpeed(typeof vConfig.speed === 'number' ? vConfig.speed : 1.0);
+
+    const aConfig = emp.avatar_config || {};
+    setAvatarEnabled(aConfig.enabled !== false);
+    setAvatarPreset(aConfig.model_preset || aConfig.preset || 'executive_sarah');
+    setAvatarExpression(aConfig.expression || 'approachable');
+    setAvatarFraming(aConfig.framing || 'bust');
     setIsModalOpen(true);
   };
 
@@ -198,6 +215,12 @@ export default function AIEmployeesPage() {
         enabled: voiceEnabled,
         voice_id: voiceId,
         speed: voiceSpeed,
+      },
+      avatar_config: {
+        enabled: avatarEnabled,
+        model_preset: avatarPreset,
+        expression: avatarExpression,
+        framing: avatarFraming,
       },
     };
 
@@ -552,6 +575,10 @@ export default function AIEmployeesPage() {
                   <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded bg-slate-800 text-slate-400">
                     <Volume2 className="w-3 h-3 text-purple-400" />
                     Voice Ready
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded bg-slate-800 text-slate-400">
+                    <User className="w-3 h-3 text-sky-400" />
+                    Avatar 3D
                   </span>
                 </div>
               </div>
@@ -955,6 +982,83 @@ export default function AIEmployeesPage() {
                         onChange={(e) => setVoiceSpeed(parseFloat(e.target.value))}
                         className="w-full accent-violet-500 cursor-pointer mt-1"
                       />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* PHASE 6: 3D DIGITAL HUMAN AVATAR CONFIGURATION */}
+              <div className="p-3.5 rounded-lg bg-slate-800/50 border border-slate-700/80 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-slate-200 flex items-center gap-1.5">
+                    <User className="w-4 h-4 text-sky-400" />
+                    3D Digital Human Avatar (Embodied AI)
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={avatarEnabled}
+                      onChange={(e) => setAvatarEnabled(e.target.checked)}
+                      className="sr-only"
+                    />
+                    <div className={`w-8 h-4 rounded-full transition-colors relative ${avatarEnabled ? 'bg-sky-600' : 'bg-slate-700'}`}>
+                      <div className={`w-3 h-3 rounded-full bg-white absolute top-0.5 transition-transform ${avatarEnabled ? 'left-4.5' : 'left-0.5'}`} />
+                    </div>
+                    <span className="text-[11px] text-slate-300 font-medium">
+                      {avatarEnabled ? 'Enabled' : 'Disabled'}
+                    </span>
+                  </label>
+                </div>
+
+                <p className="text-[11px] text-slate-400">
+                  Renders an interactive, client-side WebGL 3D humanoid avatar driven by the unified AI Employee Brain and Voice Runtime with ARKit-grade blendshapes and multi-tiered lip-sync.
+                </p>
+
+                {avatarEnabled && (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+                    <div>
+                      <label className="block text-[11px] font-medium text-slate-300 mb-1">
+                        Avatar Model Rig
+                      </label>
+                      <select
+                        value={avatarPreset}
+                        onChange={(e) => setAvatarPreset(e.target.value)}
+                        className="w-full px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                      >
+                        <option value="executive_sarah">Executive Sarah (Female Rig)</option>
+                        <option value="technical_david">Technical David (Male Rig)</option>
+                        <option value="support_alex">Support Alex (Neutral Rig)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-medium text-slate-300 mb-1">
+                        Baseline Persona
+                      </label>
+                      <select
+                        value={avatarExpression}
+                        onChange={(e) => setAvatarExpression(e.target.value)}
+                        className="w-full px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                      >
+                        <option value="approachable">Approachable (Warm Smile)</option>
+                        <option value="professional">Professional (Neutral Focus)</option>
+                        <option value="empathetic">Empathetic (Attentive Tilt)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-medium text-slate-300 mb-1">
+                        Camera Framing
+                      </label>
+                      <select
+                        value={avatarFraming}
+                        onChange={(e) => setAvatarFraming(e.target.value)}
+                        className="w-full px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                      >
+                        <option value="bust">Bust (Chest & Head)</option>
+                        <option value="close_up">Close-up (Face Only)</option>
+                        <option value="half_body">Half-Body (Waist Up)</option>
+                      </select>
                     </div>
                   </div>
                 )}

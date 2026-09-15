@@ -82,13 +82,17 @@ async def voice_stream_websocket(
 
         ACTIVE_VOICE_SESSIONS[tenant_key] = current_active + 1
 
-        # Send authentication confirmation to client
+        # Send authentication confirmation to client with avatar & voice configuration
         await websocket.send_text(json.dumps({
             "type": "auth_ok",
+            "sequence": 1,
+            "session_id": str(pub_session.id),
             "employee": {
                 "name": manager.ai_employee.name,
                 "role": manager.ai_employee.role,
                 "language": manager.ai_employee.language,
+                "avatar_config": manager.ai_employee.avatar_config or {},
+                "voice_config": manager.ai_employee.voice_config or {},
             },
         }))
 

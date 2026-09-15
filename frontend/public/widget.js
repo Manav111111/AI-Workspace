@@ -76,7 +76,7 @@
   // 3. Widget Runtime State
   var state = {
     isOpen: false,
-    mode: 'chat', // 'chat' | 'voice'
+    mode: 'chat', // 'chat' | 'voice' | 'avatar'
     publicConfig: null,
     sessionToken: null,
     sessionExpiresAt: null,
@@ -773,6 +773,7 @@
         <div class="mode-switch-wrap">
           <button class="mode-btn active" id="btn-mode-chat">Chat</button>
           <button class="mode-btn" id="btn-mode-voice">Voice</button>
+          <button class="mode-btn" id="btn-mode-avatar">Avatar</button>
         </div>
         <button class="close-btn" id="avtaar-close" aria-label="Close chat">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -819,6 +820,23 @@
       </button>
       <div class="voice-hint" id="voice-hint">Click mic to start • Click again to send • Click while AI speaks to barge-in</div>
     </div>
+
+    <!-- Avatar 3D Mode View (Phase 6) -->
+    <div id="view-avatar-mode" class="voice-panel" style="display: none; padding: 12px 16px;">
+      <div class="voice-status-pill" id="avatar-status-pill">IDLE</div>
+      <div style="width: 260px; height: 260px; position: relative; display: flex; align-items: center; justify-content: center; margin-bottom: 8px;">
+        <canvas id="avatar-3d-canvas" width="260" height="260" style="width: 260px; height: 260px; border-radius: 16px; background: radial-gradient(circle at 50% 40%, rgba(99, 102, 241, 0.2), transparent 70%);"></canvas>
+      </div>
+      <div class="voice-transcript-preview" id="avatar-transcript" style="margin-bottom: 12px; min-height: 40px;">Embodied AI ready. Click mic to converse...</div>
+      <button class="voice-mic-btn" id="avatar-mic-btn" aria-label="Toggle Microphone" style="width: 54px; height: 54px;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+          <line x1="12" y1="19" x2="12" y2="23"></line>
+          <line x1="8" y1="23" x2="16" y2="23"></line>
+        </svg>
+      </button>
+    </div>
   `;
 
   widgetWrap.appendChild(chatWindow);
@@ -835,12 +853,18 @@
   var avatarBadge = shadow.getElementById('avtaar-avatar');
   var btnModeChat = shadow.getElementById('btn-mode-chat');
   var btnModeVoice = shadow.getElementById('btn-mode-voice');
+  var btnModeAvatar = shadow.getElementById('btn-mode-avatar');
   var viewTextMode = shadow.getElementById('view-text-mode');
   var viewVoiceMode = shadow.getElementById('view-voice-mode');
+  var viewAvatarMode = shadow.getElementById('view-avatar-mode');
   var voiceStatusPill = shadow.getElementById('voice-status-pill');
+  var avatarStatusPill = shadow.getElementById('avatar-status-pill');
   var voiceVisualizer = shadow.getElementById('voice-visualizer');
   var voiceTranscriptEl = shadow.getElementById('voice-transcript');
+  var avatarTranscriptEl = shadow.getElementById('avatar-transcript');
   var voiceMicBtn = shadow.getElementById('voice-mic-btn');
+  var avatarMicBtn = shadow.getElementById('avatar-mic-btn');
+  var avatarCanvas = shadow.getElementById('avatar-3d-canvas');
 
   // 7. Security: HTTP Client using only Authorization: Bearer <session_token>
   function apiRequest(path, options) {
@@ -1215,22 +1239,50 @@
   };
 
   // =========================================================================
-  // 13. Real-Time Voice Streaming Client (Phase 5)
+  // 13. Real-Time Voice & Avatar Streaming Client (Phase 5 & 6)
   // =========================================================================
   var voiceWs = null;
   var mediaRecorder = null;
   var audioStream = null;
   var audioContext = null;
   var currentAudioSource = null;
+  var avatarEngine = null;
+
+  // Initialize 3D Avatar Engine if available
+  try {
+    if (typeof window.AvatarEngine === 'function' && avatarCanvas) {
+      avatarEngine = new window.AvatarEngine({
+        canvas: avatarCanvas,
+        width: 260,
+        height: 260,
+        onStateChange: function (engineState) {
+          if (avatarStatusPill) {
+            avatarStatusPill.className = 'voice-status-pill ' + engineState.toLowerCase();
+            avatarStatusPill.textContent = engineState;
+          }
+        },
+      });
+    }
+  } catch (e) {
+    console.warn('[Avtaar Avatar] Failed to initialize AvatarEngine:', e);
+  }
 
   function updateVoiceUI(status, transcriptText) {
     state.voiceStatus = status;
     voiceStatusPill.className = 'voice-status-pill ' + status;
     voiceStatusPill.textContent = status.toUpperCase();
 
+    if (avatarStatusPill) {
+      avatarStatusPill.className = 'voice-status-pill ' + status;
+      avatarStatusPill.textContent = status.toUpperCase();
+    }
+
     if (transcriptText !== undefined) {
       state.voiceTranscript = transcriptText;
       voiceTranscriptEl.textContent = transcriptText || 'Listening...';
+      if (avatarTranscriptEl) {
+        avatarTranscriptEl.textContent = transcriptText || 'Listening...';
+      }
     }
 
     if (status === 'speaking') {
@@ -1260,7 +1312,7 @@
 
       var wsUrl = getWsVoiceUrl();
       voiceWs = new WebSocket(wsUrl);
-      updateVoiceUI('connecting', 'Connecting voice runtime...');
+      updateVoiceUI('connecting', 'Connecting voice & avatar runtime...');
 
       voiceWs.onopen = function () {
         // Authenticate as first frame
@@ -1277,12 +1329,12 @@
       };
 
       voiceWs.onclose = function () {
-        updateVoiceUI('idle', 'Voice session closed. Click mic to speak.');
+        updateVoiceUI('idle', 'Session closed. Click mic to speak.');
       };
 
       voiceWs.onerror = function (err) {
         console.error('[Avtaar Voice WS] Error:', err);
-        updateVoiceUI('idle', 'Voice connection error.');
+        updateVoiceUI('idle', 'Connection error.');
       };
 
       return voiceWs;
@@ -1290,6 +1342,11 @@
   }
 
   function handleVoiceWsMessage(data) {
+    // Forward directly to AvatarEngine event protocol handler
+    if (avatarEngine && typeof avatarEngine.handleAvatarEvent === 'function') {
+      avatarEngine.handleAvatarEvent(data);
+    }
+
     if (data.type === 'auth_ok') {
       updateVoiceUI('idle', 'Ready to listen. Click mic to speak.');
     } else if (data.type === 'status') {
@@ -1338,7 +1395,17 @@
       audioContext.decodeAudioData(bytes.buffer, function (buffer) {
         var source = audioContext.createBufferSource();
         source.buffer = buffer;
-        source.connect(audioContext.destination);
+
+        // Route through AnalyserNode for lip-sync secondary fallback
+        var analyser = audioContext.createAnalyser();
+        analyser.fftSize = 64;
+        source.connect(analyser);
+        analyser.connect(audioContext.destination);
+
+        if (avatarEngine && typeof avatarEngine.setAudioAnalyser === 'function') {
+          avatarEngine.setAudioAnalyser(analyser);
+        }
+
         currentAudioSource = source;
         source.start(0);
       }, function (decodeErr) {
@@ -1357,6 +1424,9 @@
         currentAudioSource.stop();
       } catch (e) {}
       currentAudioSource = null;
+    }
+    if (avatarEngine && typeof avatarEngine.resetMouth === 'function') {
+      avatarEngine.resetMouth();
     }
   }
 
@@ -1402,6 +1472,7 @@
       mediaRecorder.start(250);
       state.isRecording = true;
       voiceMicBtn.classList.add('recording');
+      if (avatarMicBtn) avatarMicBtn.classList.add('recording');
       updateVoiceUI('listening', 'Listening... speak now');
     }).catch(function (err) {
       console.error('[Avtaar Voice] Microphone access denied:', err);
@@ -1414,6 +1485,7 @@
       mediaRecorder.stop();
       state.isRecording = false;
       voiceMicBtn.classList.remove('recording');
+      if (avatarMicBtn) avatarMicBtn.classList.remove('recording');
       updateVoiceUI('transcribing', 'Processing your speech...');
 
       if (audioStream) {
@@ -1423,25 +1495,42 @@
     }
   }
 
-  // Voice Mode Button Interactions
+  // Multi-Mode Button Interactions (Chat, Voice, Avatar)
   btnModeChat.onclick = function () {
     state.mode = 'chat';
     btnModeChat.classList.add('active');
     btnModeVoice.classList.remove('active');
+    if (btnModeAvatar) btnModeAvatar.classList.remove('active');
     viewTextMode.style.display = 'flex';
     viewVoiceMode.style.display = 'none';
+    if (viewAvatarMode) viewAvatarMode.style.display = 'none';
   };
 
   btnModeVoice.onclick = function () {
     state.mode = 'voice';
     btnModeVoice.classList.add('active');
     btnModeChat.classList.remove('active');
+    if (btnModeAvatar) btnModeAvatar.classList.remove('active');
     viewTextMode.style.display = 'none';
     viewVoiceMode.style.display = 'flex';
+    if (viewAvatarMode) viewAvatarMode.style.display = 'none';
     connectVoiceWebSocket();
   };
 
-  voiceMicBtn.onclick = function () {
+  if (btnModeAvatar) {
+    btnModeAvatar.onclick = function () {
+      state.mode = 'avatar';
+      btnModeAvatar.classList.add('active');
+      btnModeChat.classList.remove('active');
+      btnModeVoice.classList.remove('active');
+      viewTextMode.style.display = 'none';
+      viewVoiceMode.style.display = 'none';
+      if (viewAvatarMode) viewAvatarMode.style.display = 'flex';
+      connectVoiceWebSocket();
+    };
+  }
+
+  function handleMicButtonClick() {
     if (state.voiceStatus === 'speaking') {
       // Barge-in interruption
       if (voiceWs && voiceWs.readyState === WebSocket.OPEN) {
@@ -1459,7 +1548,12 @@
     } else {
       stopRecording();
     }
-  };
+  }
+
+  voiceMicBtn.onclick = handleMicButtonClick;
+  if (avatarMicBtn) {
+    avatarMicBtn.onclick = handleMicButtonClick;
+  }
 
   // 14. Initialize configuration
   fetchPublicConfig();

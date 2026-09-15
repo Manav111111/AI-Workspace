@@ -57,6 +57,7 @@ class VoiceRuntimeManager:
         self.active_tts_task: Optional[asyncio.Task] = None
         self.active_generation_id: Optional[str] = None
         self.audio_buffer = bytearray()
+        self.sequence_counter = 0
 
         # Telemetry metrics
         self.input_audio_seconds = 0.0
@@ -69,6 +70,26 @@ class VoiceRuntimeManager:
         self.first_transcript_time_ms = 0.0
         self.first_audio_time_ms = 0.0
         self.session_start_time = time.perf_counter()
+
+    async def send_avatar_event(self, event_type: str, payload: Optional[Dict[str, Any]] = None, **kwargs):
+        """Dispatches an AvatarEvent adhering to the standardized Avatar Event Protocol.
+        Guarantees:
+        - Monotonically increasing sequence number per session.
+        - High-resolution timestamp.
+        - Uniform envelope containing session_id and generation_id.
+        """
+        self.sequence_counter += 1
+        data = {
+            "type": event_type,
+            "sequence": self.sequence_counter,
+            "timestamp": time.time(),
+            "session_id": str(self.public_session.id) if self.public_session else None,
+            "generation_id": self.active_generation_id,
+        }
+        if payload:
+            data.update(payload)
+        data.update(kwargs)
+        await self.websocket.send_text(json.dumps(data))
 
     async def authenticate_handshake(self, auth_token: str) -> PublicChatSession:
         """Validates bearer session token from the initial handshake frame.
@@ -131,11 +152,7 @@ class VoiceRuntimeManager:
             self.active_tts_task.cancel()
 
         # Send interrupt command to wipe browser audio buffer
-        await self.websocket.send_text(json.dumps({
-            "type": "interrupted",
-            "generation_id": self.active_generation_id,
-            "timestamp": time.time(),
-        }))
+        await self.send_avatar_event("interrupted")
 
     async def process_user_utterance(
         self,
@@ -156,11 +173,7 @@ class VoiceRuntimeManager:
         # 1. Speech-to-Text (STT) or direct text
         final_text = (user_text or "").strip()
         if not final_text and audio_data:
-            await self.websocket.send_text(json.dumps({
-                "type": "status",
-                "state": "transcribing",
-                "generation_id": generation_id,
-            }))
+            await self.send_avatar_event("status", state="transcribing")
             self.stt_requests += 1
             est_audio_seconds = max(0.5, round(len(audio_data) / 32000, 2))
             self.input_audio_seconds += est_audio_seconds
@@ -175,27 +188,18 @@ class VoiceRuntimeManager:
             self.first_transcript_time_ms = round((time.perf_counter() - stt_start) * 1000, 2)
 
             # Send final transcript to client
-            await self.websocket.send_text(json.dumps({
-                "type": "transcript",
-                "text": final_text,
-                "is_final": True,
-                "generation_id": generation_id,
-            }))
+            await self.send_avatar_event(
+                "transcript",
+                text=final_text,
+                is_final=True,
+            )
 
         if not final_text and not pending_action_id:
-            await self.websocket.send_text(json.dumps({
-                "type": "status",
-                "state": "idle",
-                "generation_id": generation_id,
-            }))
+            await self.send_avatar_event("status", state="idle")
             return
 
         # 2. Unified ConversationEngine Execution (Reusing identical RAG, Agent, Tools, and Confirmation)
-        await self.websocket.send_text(json.dumps({
-            "type": "status",
-            "state": "thinking",
-            "generation_id": generation_id,
-        }))
+        await self.send_avatar_event("status", state="thinking")
 
         parsed_action_id = uuid.UUID(pending_action_id) if pending_action_id else None
         engine = ConversationEngine(self.session)
@@ -237,22 +241,17 @@ class VoiceRuntimeManager:
             }
 
         # Send structured text and citation payload
-        await self.websocket.send_text(json.dumps({
-            "type": "assistant_message",
-            "text": reply_text,
-            "citations": citations,
-            "tool_activity": tool_activity,
-            "pending_confirmation": pending_conf,
-            "generation_id": generation_id,
-        }))
+        await self.send_avatar_event(
+            "assistant_message",
+            text=reply_text,
+            citations=citations,
+            tool_activity=tool_activity,
+            pending_confirmation=pending_conf,
+        )
 
         # 3. Stream Synthesized Audio (TTS)
         self.is_ai_speaking = True
-        await self.websocket.send_text(json.dumps({
-            "type": "status",
-            "state": "speaking",
-            "generation_id": generation_id,
-        }))
+        await self.send_avatar_event("status", state="speaking")
 
         voice_config = (self.ai_employee.voice_config or {}).copy()
         segmenter = SentenceSegmenter(min_chunk_chars=settings.VOICE_TTS_BUFFER_MIN_CHARS)
@@ -275,14 +274,13 @@ class VoiceRuntimeManager:
                         first_chunk = False
 
                     self.output_audio_seconds += max(0.5, len(audio_bytes) / 16000)
-                    # Stream binary audio chunk as base64 with metadata
-                    await self.websocket.send_text(json.dumps({
-                        "type": "audio_chunk",
-                        "audio_base64": base64.b64encode(audio_bytes).decode("ascii"),
-                        "format": "mp3",
-                        "text": sentence,
-                        "generation_id": generation_id,
-                    }))
+                    # Stream binary audio chunk as base64 with metadata & sequence
+                    await self.send_avatar_event(
+                        "audio_chunk",
+                        audio_base64=base64.b64encode(audio_bytes).decode("ascii"),
+                        format="mp3",
+                        text=sentence,
+                    )
                     # Brief yield for event loop
                     await asyncio.sleep(0.01)
 
@@ -290,11 +288,7 @@ class VoiceRuntimeManager:
             logger.info("TTS task was cancelled.")
         finally:
             self.is_ai_speaking = False
-            await self.websocket.send_text(json.dumps({
-                "type": "status",
-                "state": "idle",
-                "generation_id": generation_id,
-            }))
+            await self.send_avatar_event("status", state="idle")
 
         total_turn_ms = round((time.perf_counter() - utterance_start) * 1000, 2)
 
