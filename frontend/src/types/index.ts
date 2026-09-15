@@ -53,6 +53,10 @@ export interface AIEmployee {
   tool_names?: string[];
   tools?: string[];
   assigned_tools?: AIEmployeeTool[];
+  public_id?: string | null;
+  is_published?: boolean;
+  allowed_domains?: string[];
+  widget_config?: Record<string, any>;
 }
 
 export interface KnowledgeBase {
@@ -221,3 +225,39 @@ export interface ChatResponse {
   pending_confirmation?: PendingConfirmation | null;
   metrics: Record<string, any>;
 }
+
+export interface EmployeeEmbedCodeResponse {
+  public_id: string;
+  is_published: boolean;
+  widget_script_url: string;
+  embed_snippet: string;
+  preview_url: string;
+  allowed_domains: string[];
+  widget_config: Record<string, any>;
+}
+
+export interface EmployeePublishRequest {
+  is_published?: boolean;
+  allowed_domains?: string[];
+}
+
+export interface EmployeeWidgetConfigRequest {
+  primary_color?: string;
+  theme?: string;
+  position?: string;
+  brand_name?: string;
+  welcome_message?: string;
+  logo_url?: string;
+  allowed_domains?: string[];
+}
+
+export interface PublicEmployeeConfig {
+  public_id: string;
+  name: string;
+  role: string;
+  description?: string | null;
+  language: string;
+  avatar_config: Record<string, any>;
+  widget_config: Record<string, any>;
+}
+

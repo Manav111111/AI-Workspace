@@ -53,6 +53,10 @@ class AIEmployeeRead(AIEmployeeBase):
     knowledge_base_ids: List[uuid.UUID] = Field(default_factory=list)
     assigned_knowledge_bases: List[KnowledgeBaseSummary] = Field(default_factory=list)
     tools: List[str] = Field(default_factory=list)
+    public_id: Optional[str] = None
+    is_published: bool = False
+    allowed_domains: List[str] = Field(default_factory=list)
+    widget_config: Dict[str, Any] = Field(default_factory=dict)
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -89,4 +93,8 @@ class AIEmployeeRead(AIEmployeeBase):
             knowledge_base_ids=kb_ids,
             assigned_knowledge_bases=kb_summaries,
             tools=tool_names,
+            public_id=getattr(emp, "public_id", None),
+            is_published=getattr(emp, "is_published", False),
+            allowed_domains=getattr(emp, "allowed_domains", []) or [],
+            widget_config=getattr(emp, "widget_config", {}) or {},
         )

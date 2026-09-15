@@ -1,4 +1,4 @@
-# AI Employee Platform (Phase 0 Foundation, Phase 1 Knowledge Base & Phase 2 Conversational RAG)
+# AI Employee Platform (Phases 0-4 Complete)
 
 An enterprise-ready, multi-tenant SaaS platform that enables companies to create, train, and deploy autonomous, company-specific AI employees.
 
@@ -9,10 +9,11 @@ An enterprise-ready, multi-tenant SaaS platform that enables companies to create
 The long-term vision of this platform is to provide an end-to-end operational AI workforce:
 1. **Company Onboarding (Phase 0 - Complete)**: A company signs up, creates its isolated workspace, and invites team members.
 2. **Knowledge Ingestion (Phase 1 - Complete)**: The company uploads documents (PDF, DOCX, Markdown, TXT, CSV), automatically parsed, cleaned, chunked, embedded, and indexed into isolated vector search (Qdrant).
-3. **AI Employee Configuration (Phase 0 & 1 - Complete)**: The company creates and customizes AI employees (name, role, personality, system prompt, tool capabilities).
-4. **Conversations & Grounded RAG Chat (Phase 2 - Complete)**: Decoupled conversational brain, prompt injection defenses, grounded answering with citations, conversation persistence, and interactive testing console.
-5. **Real-Time Voice (Phase 3 - Upcoming)**: Low-latency speech-to-text and text-to-speech interaction re-using the conversational brain.
-6. **3D Interactive Avatar (Phase 4 - Upcoming)**: A realistic 3D avatar with facial blendshapes, emotional state, lip-sync, gestures, and interactive animations.
+3. **Conversations & Grounded RAG Chat (Phase 2 - Complete)**: Decoupled conversational brain, prompt injection defenses, grounded answering with citations, conversation persistence, and interactive testing console.
+4. **Autonomous Agent Capabilities & Tool Lifecycle (Phase 3 - Complete)**: Action boundaries, scoped product search, order lookup, and write-tool human-in-the-loop confirmation lifecycles.
+5. **Public AI Employee Website Widget Runtime (Phase 4 - Complete)**: Standalone embeddable `widget.js` (Shadow DOM isolated, zero React runtime required on host site), anonymous session security, bearer token auth, rate limiting, domain restriction integration boundaries, and dashboard embed customizer.
+6. **Real-Time Voice AI (Phase 5 - Upcoming)**: Low-latency speech-to-text (STT) and text-to-speech (TTS) streaming interaction re-using the conversational brain.
+
 
 ---
 
@@ -158,7 +159,7 @@ cd backend
 .\.venv\Scripts\pytest -v
 ```
 
-### Verified Test Suites (22/22 Passing)
+### Verified Test Suites (54/54 Passing)
 - `test_health.py`: Liveness (`/health`) and readiness (`/ready`) probes.
 - `test_auth.py`: Registration, login, JWT issuance, bcrypt hashing verification, `/me` profile.
 - `test_companies.py`: Company workspace creation, creator assigned as `OWNER`, inviting members.
@@ -176,6 +177,23 @@ cd backend
 - `test_conversations.py`: Conversation CRUD, chronological message history ordering, and tenant scoping.
 - `test_conversation_engine.py`: Grounded RAG conversation lifecycle, citation attribution, latency metrics, and fallback on unanswerable questions.
 - `test_chat_tenant_isolation.py`: Cross-tenant security proving Company B cannot read Company A conversations, use Company A AI Employees, or retrieve Company A documents.
+- `test_agent_orchestrator.py`: Multi-turn conversational planning and execution lifecycle.
+- `test_tool_registry.py`: Dynamic tool registry, argument validation, and parameter sanitization.
+- `test_tool_permissions.py`: Enforcing READ (automatic) vs WRITE (approval required) permission boundaries.
+- `test_pending_tool_confirmation.py`: Server-managed pending action state transitions and expiry.
+- `test_tool_execution.py`: Execution of permitted tools against business entities (orders, leads).
+- `test_scoped_product_search.py`: Knowledge-base bounded semantic catalog search.
+- `test_malicious_tool_arguments.py`: Sanitization and protection against tool parameter injection.
+- `test_tool_tenant_isolation.py`: Strict isolation preventing cross-tenant tool execution or data tampering.
+- `test_tool_idempotency.py`: Replay protection ensuring write actions execute exactly once.
+- `test_public_employee.py`: Sanitized public config bootstrap (zero prompt/UUID leakage).
+- `test_public_session.py`: Ephemeral bearer session generation and resumption.
+- `test_public_chat.py`: Public website widget chat messaging and telemetry.
+- `test_public_rate_limit.py`: IP-based session creation and message rate limiting.
+- `test_public_domain_restrictions.py`: Origin/referer integration boundary enforcement.
+- `test_public_tenant_isolation.py`: Cross-tenant security across public visitor sessions.
+- `test_public_tool_security.py`: Human confirmation enforcement for public write tools.
+- `test_public_e2e_flow.py`: Full end-to-end acceptance flow for Phase 4 website widget.
 
 ---
 

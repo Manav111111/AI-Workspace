@@ -1,7 +1,7 @@
 import enum
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 import uuid
-from sqlalchemy import Enum, ForeignKey, JSON, String, Text, Uuid
+from sqlalchemy import Boolean, Enum, ForeignKey, JSON, String, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import BaseModel
 
@@ -37,6 +37,12 @@ class AIEmployee(BaseModel):
         default=AIEmployeeStatus.DRAFT,
         nullable=False,
     )
+    # Phase 4: Public AI Employee Runtime & Widget Configuration
+    public_id: Mapped[Optional[str]] = mapped_column(String(64), unique=True, index=True, nullable=True)
+    is_published: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)
+    allowed_domains: Mapped[List[str]] = mapped_column(JSON, default=list, nullable=False)
+    widget_config: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+
     # Extensibility for Future Avatar and Voice configuration
     avatar_config: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
     voice_config: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
