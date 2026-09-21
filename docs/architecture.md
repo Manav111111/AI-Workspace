@@ -329,3 +329,74 @@ The core SaaS application backend (FastAPI + PostgreSQL + Next.js) must **NEVER*
 1. **Decoupled Inference Interface**: The backend communicates with model endpoints over standard network protocols (HTTP/gRPC/WebSocket).
 2. **Independent GPU Model Services**: Heavy GPU workloads (e.g., local LLM fine-tuning, voice synthesis models, or 3D neural rendering) operate as separate services hosted on dedicated GPU infrastructure or external GPU providers (e.g., RunPod, AWS EC2 G5, external GPU clusters, or external experimentation environments like Kaggle).
 3. **CPU Machines for SaaS Development**: Developers can build, test, and deploy the entire SaaS platform, dashboard, multi-tenancy, and RAG logic on standard developer laptops without any GPU hardware requirements.
+
+---
+
+## 9. Phase 7: Advanced Digital Human Behavior & Avatar Orchestration
+
+Phase 7 introduces the production-grade **Digital Human Behavior Engine**, elevating the 3D presentation layer into an intelligent, embodied conversational interface while strictly upholding the core architectural invariant: **The AI Employee Brain remains the single source of truth; the Avatar is strictly a presentation consumer.**
+
+```
+                  AI EMPLOYEE BRAIN (Server-side)
+                               │
+                               ▼
+                      CONVERSATION ENGINE
+                               │
+            ┌──────────────────┴──────────────────┐
+            ▼                                     ▼
+      TEXT CHAT                              VOICE RUNTIME
+                                                  │
+                                                  ▼
+                                      AVATAR EVENT PROTOCOL (v2)
+                                      - protocol_version: 2
+                                      - sequence & generation_id
+                                      - speech_start / speech_end
+                                      - emotion / gesture / gaze
+                                                  │
+                                                  ▼
+                                    AVATAR BEHAVIOR ENGINE (Client)
+                                    ┌────────────────────────────┐
+                                    │ Capability Detection       │
+                                    │ Emotion Controller         │
+                                    │ Gaze & Micro-Saccades      │
+                                    │ Natural Double-Blinks      │
+                                    │ Head Kinematics            │
+                                    │ Priority Scheduler         │
+                                    │ Coarticulated Lip Sync     │
+                                    └─────────────┬──────────────┘
+                                                  │
+                                                  ▼
+                                          THREE.JS / WEBGL
+                                                  │
+                                    (Fallback: Honest Fallback UI)
+```
+
+### Key Components
+
+1. **Protocol v2 Specification**:
+   - Backward-compatible versioning with `protocol_version: 2` header.
+   - Strict generation ID tracking (`generation_id`) to discard late packets from superseded turns.
+   - Monotonically increasing sequence ordering (`sequence`).
+   - Turn-taking markers (`speech_start`, `speech_end`) for smooth mouth return to neutral.
+
+2. **Presentation Metadata Validation**:
+   - Strongly typed Pydantic models in `app.schemas.avatar.PresentationMetadata`.
+   - Clamps intensity ($0.0 \le \text{intensity} \le 1.0$) and bounds duration ($100\text{ms} \le \text{duration} \le 10000\text{ms}$).
+   - Sanitizes and rejects dangerous script injections (`<script>`, `javascript:`, `eval()`).
+   - Unrecognized emotions or corrupt payloads fall back safely to `neutral` without interrupting chat.
+
+3. **Behavioral Subsystems**:
+   - **Emotion Controller**: Controlled presentation emotions (`happy`, `friendly`, `confident`, `curious`, `thinking`, `concerned`, `excited`, `apologetic`, `serious`).
+   - **Gaze Dynamics**: Direct attentive eye contact, thinking glance-away, micro-saccades, and smooth LERP interpolation.
+   - **Blinking**: Variable intervals (2.5-5.5s), realistic double-blinks (15% probability), and closed-eye failsafe.
+   - **Kinematics**: Attentive listening nods, thinking head tilts, and subtle speech rhythm resonance.
+   - **Gestures**: Capability-aware (falls back safely from hand gestures to head nods if skeletal hands are absent).
+
+4. **Priority Scheduler**:
+   - Strict priority ordering: `INTERRUPTED (100) > SAFETY (90) > SPEECH (80) > EMOTION (60) > GESTURE (50) > HEAD (40) > IDLE (10)`.
+   - Interruption immediately halts speech, cancels gestures, and resets mouth to `viseme_sil`.
+
+5. **Renderer Failure & Telemetry**:
+   - If WebGL hardware acceleration is unavailable, the engine does NOT fake 3D with 2D rendering.
+   - Activates an honest fallback card while keeping Text Chat and Voice AI 100% operational.
+   - Emits telemetry error callback for observability.

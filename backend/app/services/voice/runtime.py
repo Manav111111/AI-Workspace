@@ -80,6 +80,7 @@ class VoiceRuntimeManager:
         """
         self.sequence_counter += 1
         data = {
+            "protocol_version": 2,
             "type": event_type,
             "sequence": self.sequence_counter,
             "timestamp": time.time(),
@@ -240,18 +241,43 @@ class VoiceRuntimeManager:
                 "message": pc.get("message"),
             }
 
-        # Send structured text and citation payload
+        # Send structured text, citation payload, and presentation metadata
+        presentation_meta = getattr(engine_response, "presentation", None)
         await self.send_avatar_event(
             "assistant_message",
             text=reply_text,
             citations=citations,
             tool_activity=tool_activity,
             pending_confirmation=pending_conf,
+            presentation=presentation_meta,
         )
+
+        # Dispatch explicit presentation events if present
+        if presentation_meta:
+            if presentation_meta.get("emotion"):
+                await self.send_avatar_event(
+                    "emotion",
+                    emotion=presentation_meta["emotion"],
+                    intensity=presentation_meta.get("intensity", 0.5),
+                    duration_ms=presentation_meta.get("duration_ms", 2000),
+                )
+            if presentation_meta.get("gesture") and presentation_meta.get("gesture") != "none":
+                await self.send_avatar_event(
+                    "gesture",
+                    gesture=presentation_meta["gesture"],
+                    duration_ms=presentation_meta.get("duration_ms", 2000),
+                )
+            if presentation_meta.get("gaze"):
+                await self.send_avatar_event(
+                    "gaze",
+                    gaze=presentation_meta["gaze"],
+                    duration_ms=presentation_meta.get("duration_ms", 2000),
+                )
 
         # 3. Stream Synthesized Audio (TTS)
         self.is_ai_speaking = True
         await self.send_avatar_event("status", state="speaking")
+        await self.send_avatar_event("speech_start")
 
         voice_config = (self.ai_employee.voice_config or {}).copy()
         segmenter = SentenceSegmenter(min_chunk_chars=settings.VOICE_TTS_BUFFER_MIN_CHARS)
@@ -283,6 +309,9 @@ class VoiceRuntimeManager:
                     )
                     # Brief yield for event loop
                     await asyncio.sleep(0.01)
+
+            if self.is_ai_speaking:
+                await self.send_avatar_event("speech_end")
 
         except asyncio.CancelledError:
             logger.info("TTS task was cancelled.")

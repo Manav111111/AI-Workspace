@@ -15,6 +15,7 @@ from app.services.llm import get_llm_provider
 from app.services.llm.base import LLMProvider
 from app.services.prompt_builder import PromptBuilder
 from app.services.retrieval import RetrievalService, RetrievedChunk
+from app.schemas.avatar import map_conversation_context_to_presentation
 
 logger = logging.getLogger("app.services.conversation_engine")
 
@@ -30,6 +31,7 @@ class ConversationEngineResponse:
     tool_calls: List[Dict[str, Any]] = field(default_factory=list)
     pending_confirmation: Optional[Dict[str, Any]] = None
     metrics: Dict[str, Any] = field(default_factory=dict)
+    presentation: Optional[Dict[str, Any]] = None
 
 
 class ConversationEngine:
@@ -168,6 +170,15 @@ class ConversationEngine:
             f"| chunks={len(agent_res.retrieved_chunks)} | total_lat={total_latency_ms}ms"
         )
 
+        # 8. Deterministic Presentation Metadata for Avatar/Voice Layers
+        tool_names = [tc.get("tool_name") for tc in agent_res.tool_calls_executed] if agent_res.tool_calls_executed else []
+        pres_metadata = map_conversation_context_to_presentation(
+            reply_text=agent_res.content,
+            tool_activity=tool_names,
+            pending_confirmation=agent_res.pending_confirmation,
+            user_query=query,
+        )
+
         return ConversationEngineResponse(
             user_message=user_msg,
             assistant_message=assistant_msg,
@@ -177,4 +188,5 @@ class ConversationEngine:
             tool_calls=agent_res.tool_calls_executed,
             pending_confirmation=agent_res.pending_confirmation,
             metrics=agent_res.metrics,
+            presentation=pres_metadata.model_dump(),
         )

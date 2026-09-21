@@ -826,6 +826,11 @@
       <div class="voice-status-pill" id="avatar-status-pill">IDLE</div>
       <div style="width: 260px; height: 260px; position: relative; display: flex; align-items: center; justify-content: center; margin-bottom: 8px;">
         <canvas id="avatar-3d-canvas" width="260" height="260" style="width: 260px; height: 260px; border-radius: 16px; background: radial-gradient(circle at 50% 40%, rgba(99, 102, 241, 0.2), transparent 70%);"></canvas>
+        <div id="avatar-fallback-card" style="display: none; width: 260px; height: 260px; border-radius: 16px; background: rgba(30, 41, 59, 0.85); border: 1px solid rgba(255, 255, 255, 0.1); flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px; color: #e2e8f0;">
+          <div style="font-size: 32px; margin-bottom: 8px;">👤</div>
+          <div style="font-weight: 600; font-size: 14px; margin-bottom: 4px;">3D Avatar Unavailable</div>
+          <div style="font-size: 12px; color: #94a3b8; line-height: 1.4;">WebGL hardware acceleration is disabled. Voice AI and Text Chat remain fully operational.</div>
+        </div>
       </div>
       <div class="voice-transcript-preview" id="avatar-transcript" style="margin-bottom: 12px; min-height: 40px;">Embodied AI ready. Click mic to converse...</div>
       <button class="voice-mic-btn" id="avatar-mic-btn" aria-label="Toggle Microphone" style="width: 54px; height: 54px;">
@@ -1214,6 +1219,9 @@
           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
         </svg>
       `;
+      if (avatarEngine && typeof avatarEngine.pause === 'function') {
+        avatarEngine.pause();
+      }
     }
   };
 
@@ -1225,6 +1233,9 @@
         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
       </svg>
     `;
+    if (avatarEngine && typeof avatarEngine.pause === 'function') {
+      avatarEngine.pause();
+    }
   };
 
   sendBtn.onclick = function () {
@@ -1260,6 +1271,12 @@
             avatarStatusPill.className = 'voice-status-pill ' + engineState.toLowerCase();
             avatarStatusPill.textContent = engineState;
           }
+        },
+        onRendererFailure: function (err) {
+          console.warn('[Avtaar Widget] 3D Avatar renderer failed; activating fallback UI:', err.message);
+          if (avatarCanvas) avatarCanvas.style.display = 'none';
+          var fallbackEl = shadow.getElementById('avatar-fallback-card');
+          if (fallbackEl) fallbackEl.style.display = 'flex';
         },
       });
     }
@@ -1504,6 +1521,7 @@
     viewTextMode.style.display = 'flex';
     viewVoiceMode.style.display = 'none';
     if (viewAvatarMode) viewAvatarMode.style.display = 'none';
+    if (avatarEngine && typeof avatarEngine.pause === 'function') avatarEngine.pause();
   };
 
   btnModeVoice.onclick = function () {
@@ -1514,6 +1532,7 @@
     viewTextMode.style.display = 'none';
     viewVoiceMode.style.display = 'flex';
     if (viewAvatarMode) viewAvatarMode.style.display = 'none';
+    if (avatarEngine && typeof avatarEngine.pause === 'function') avatarEngine.pause();
     connectVoiceWebSocket();
   };
 
@@ -1526,6 +1545,7 @@
       viewTextMode.style.display = 'none';
       viewVoiceMode.style.display = 'none';
       if (viewAvatarMode) viewAvatarMode.style.display = 'flex';
+      if (avatarEngine && typeof avatarEngine.resume === 'function') avatarEngine.resume();
       connectVoiceWebSocket();
     };
   }
