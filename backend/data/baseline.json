@@ -1,0 +1,18 @@
+{
+  "baseline_run_id": "aaaa5f70-53f8-4522-b44c-9470c85cbe2b",
+  "dataset_name": "golden_eval_dataset_hr",
+  "metrics": {
+    "recall_at_1": 0.1667,
+    "recall_at_3": 0.3167,
+    "recall_at_5": 0.45,
+    "precision_at_1": 0.3333,
+    "precision_at_3": 0.2222,
+    "precision_at_5": 0.1867,
+    "ndcg_at_5": 0.3767,
+    "mrr": 0.5267,
+    "refusal_accuracy": 0.0,
+    "avg_latency_ms": 7194.02,
+    "faithfulness": 0.9933,
+    "answer_relevance": 0.6053
+  }
+}

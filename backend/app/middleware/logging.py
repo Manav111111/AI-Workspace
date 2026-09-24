@@ -49,4 +49,16 @@ class StructuredLoggingMiddleware(BaseHTTPMiddleware):
                 },
                 exc_info=True,
             )
-            raise exc
+            from fastapi.responses import JSONResponse
+            from app.core.exceptions import AppException
+            if isinstance(exc, AppException):
+                return JSONResponse(
+                    status_code=exc.status_code,
+                    content={"error": {"code": exc.code, "message": exc.message, "details": exc.details}},
+                    headers={"X-Request-ID": request_id, "X-Process-Time-Ms": f"{process_time:.2f}"},
+                )
+            return JSONResponse(
+                status_code=500,
+                content={"error": {"code": "INTERNAL_SERVER_ERROR", "message": "An internal server error occurred", "details": str(exc)}},
+                headers={"X-Request-ID": request_id, "X-Process-Time-Ms": f"{process_time:.2f}"},
+            )

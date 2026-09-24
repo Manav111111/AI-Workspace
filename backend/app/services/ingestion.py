@@ -1,13 +1,16 @@
 import logging
+import re
 from typing import List, Optional
 import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
+from app.core.config import settings
 from app.models.document import Document, DocumentStatus
 from app.models.document_chunk import DocumentChunk
 from app.repositories.document import DocumentRepository
 from app.repositories.document_chunk import DocumentChunkRepository
 from app.services.chunking import ChunkingService
 from app.services.embeddings import EmbeddingService
+from app.services.invariants import validate_vectors_before_insert
 from app.services.parsers import get_parser_for_file
 from app.services.qdrant_service import QdrantService
 from app.services.storage import StorageService, LocalStorageService
@@ -15,8 +18,21 @@ from app.services.storage import StorageService, LocalStorageService
 logger = logging.getLogger("app.services.ingestion")
 
 
+def sanitize_error_message(msg: str) -> str:
+    """Removes sensitive credentials from error messages before storing in DB or logging."""
+    if not msg:
+        return ""
+    clean = re.sub(r"key=[^&\s'\"]+", "key=[REDACTED]", msg)
+    for sensitive_key in [settings.GEMINI_API_KEY, settings.GOOGLE_API_KEY, settings.QDRANT_API_KEY]:
+        if sensitive_key and sensitive_key in clean:
+            clean = clean.replace(sensitive_key, "[REDACTED]")
+    return clean
+
+
 class IngestionService:
-    """Orchestrates document parsing, cleaning, chunking, embedding, and vector storage."""
+    """Orchestrates document parsing, cleaning, chunking, embedding, and vector storage.
+    Enforces strict failure states, credential-sanitized errors, and vector dimension invariants.
+    """
 
     def __init__(
         self,
@@ -65,15 +81,18 @@ class IngestionService:
             if not raw_chunks:
                 raise ValueError("No text content could be extracted or chunked from document")
 
-            # 4. Generate dense embeddings for all chunks in batch
+            # 4. Generate dense embeddings for all chunks in bounded batches
             texts = [c.content for c in raw_chunks]
             embeddings = self.embedder.generate_embeddings(texts)
 
-            # 5. Idempotency: Clean up any existing chunks or vectors for this document
+            # 5. Invariant Check: Verify vector dimension matches Qdrant collection
+            validate_vectors_before_insert(embeddings, self.qdrant)
+
+            # 6. Idempotency: Clean up any existing chunks or vectors for this document
             await self.chunk_repo.delete_by_document(company_id=company_id, document_id=document.id)
             self.qdrant.delete_document_vectors(company_id=company_id, document_id=document.id)
 
-            # 6. Persist DocumentChunk records to database
+            # 7. Persist DocumentChunk records to database
             created_chunk_records = []
             for r_chunk in raw_chunks:
                 db_chunk = DocumentChunk(
@@ -96,7 +115,7 @@ class IngestionService:
                     "chunk_metadata": db_chunk.chunk_metadata,
                 })
 
-            # 7. Upsert vectors with tenant payload metadata to Qdrant
+            # 8. Upsert vectors with tenant payload metadata to Qdrant
             self.qdrant.upsert_chunks(
                 company_id=company_id,
                 knowledge_base_id=document.knowledge_base_id,
@@ -105,13 +124,16 @@ class IngestionService:
                 embeddings=embeddings,
             )
 
-            # 8. Mark document as PROCESSED
+            # 9. Mark document as PROCESSED
             document.status = DocumentStatus.PROCESSED
             document.error_message = None
             document.document_metadata = {
                 **document.document_metadata,
                 "total_chunks": len(created_chunk_records),
                 "total_tokens": sum(c["token_count"] for c in created_chunk_records),
+                "embedding_provider": settings.EMBEDDING_PROVIDER,
+                "embedding_model": settings.EMBEDDING_MODEL,
+                "embedding_dimension": settings.EMBEDDING_DIMENSION,
             }
             await self.doc_repo.update(document)
             await self.session.commit()
@@ -123,12 +145,13 @@ class IngestionService:
             return document
 
         except Exception as e:
+            safe_error = sanitize_error_message(str(e))
             logger.error(
-                f"Failed to process document {document.id} for company {company_id}: {str(e)}",
+                f"Failed to process document {document.id} for company {company_id}: {safe_error}",
                 exc_info=True,
             )
             document.status = DocumentStatus.FAILED
-            document.error_message = str(e)
+            document.error_message = safe_error
             await self.doc_repo.update(document)
             await self.session.commit()
             await self.session.refresh(document)

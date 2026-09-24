@@ -273,3 +273,53 @@ export interface AvailableVoicesResponse {
   voices: VoiceDefinition[];
 }
 
+export interface EvaluationResultItem {
+  id: string;
+  evaluation_run_id: string;
+  query_id: string;
+  query_text: string;
+  category?: string | null;
+  is_answerable: boolean;
+  expected_chunk_ids: string[];
+  retrieved_chunk_ids: string[];
+  retrieved_scores: number[];
+  recall_at_1?: number | null;
+  recall_at_3?: number | null;
+  recall_at_5?: number | null;
+  precision_at_1?: number | null;
+  precision_at_3?: number | null;
+  precision_at_5?: number | null;
+  reciprocal_rank?: number | null;
+  ndcg_at_5?: number | null;
+  generated_answer?: string | null;
+  reference_answer?: string | null;
+  faithfulness_score?: number | null;
+  answer_relevance_score?: number | null;
+  refusal_correct?: boolean | null;
+  retrieval_latency_ms?: number | null;
+  generation_latency_ms?: number | null;
+  total_latency_ms?: number | null;
+}
+
+export interface EvaluationRun {
+  id: string;
+  company_id: string;
+  ai_employee_id: string;
+  dataset_name: string;
+  total_queries: number;
+  status: 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED';
+  metrics_summary: Record<string, any>;
+  duration_seconds?: number | null;
+  error_message?: string | null;
+  created_at: string;
+  completed_at?: string | null;
+  items?: EvaluationResultItem[];
+}
+
+export interface EvaluationBaseline {
+  baseline_run_id?: string | null;
+  dataset_name?: string | null;
+  metrics: Record<string, any>;
+  created_at?: string | null;
+}
+

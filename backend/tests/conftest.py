@@ -7,17 +7,19 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from app.api.deps import get_db
 from app.core.config import settings
-from app.core.security import get_password_hash
+
+# Configure test environment BEFORE importing app and services
+settings.ENVIRONMENT = "test"
+settings.QDRANT_URL = ":memory:"
+settings.STORAGE_ROOT = "./test_uploads"
+settings.LLM_PROVIDER = "mock"
+settings.EMBEDDING_PROVIDER = "cpu"
+
 from app.main import app
 from app.models.base import Base
 from app.models.company import Company
 from app.models.membership import Membership, MembershipRole
 from app.models.user import User
-
-# Configure test environment
-settings.ENVIRONMENT = "test"
-settings.QDRANT_URL = ":memory:"
-settings.STORAGE_ROOT = "./test_uploads"
 
 # In-memory test SQLite async database
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"

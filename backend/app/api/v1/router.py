@@ -10,6 +10,7 @@ from app.api.v1.tools import router as tools_router
 from app.api.v1.business_data import router as business_data_router
 from app.api.v1.public import router as public_router
 from app.api.v1.voice import router as voice_router
+from app.api.v1.evaluations import router as evaluations_router
 
 api_router = APIRouter()
 
@@ -23,3 +24,5 @@ api_router.include_router(tools_router)
 api_router.include_router(business_data_router)
 api_router.include_router(public_router)
 api_router.include_router(voice_router)
+api_router.include_router(evaluations_router)
+

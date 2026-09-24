@@ -78,3 +78,5 @@ Thumbs.db
 # Docker / DB data volumes
 postgres_data/
 redis_data/
+qdrant_storage/
+**/qdrant_storage/

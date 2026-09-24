@@ -44,3 +44,25 @@ class DocumentChunkRepository(BaseRepository[DocumentChunk]):
         )
         result = await self.session.execute(stmt)
         return result.rowcount
+
+    async def list_by_knowledge_bases(
+        self,
+        company_id: uuid.UUID,
+        knowledge_base_ids: Optional[Sequence[uuid.UUID]] = None,
+        limit: Optional[int] = None,
+    ) -> Sequence[DocumentChunk]:
+        """Fetch all chunks for a tenant, optionally filtered to a list of knowledge base IDs."""
+        stmt = (
+            select(DocumentChunk)
+            .where(DocumentChunk.company_id == company_id)
+        )
+        if knowledge_base_ids:
+            stmt = stmt.where(DocumentChunk.knowledge_base_id.in_(knowledge_base_ids))
+
+        stmt = stmt.order_by(DocumentChunk.created_at.asc())
+        if limit:
+            stmt = stmt.limit(limit)
+
+        result = await self.session.execute(stmt)
+        return result.scalars().all()
+

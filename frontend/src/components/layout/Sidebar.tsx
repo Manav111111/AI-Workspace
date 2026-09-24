@@ -11,6 +11,7 @@ import {
   Wrench,
   Settings,
   Sparkles,
+  BarChart3,
 } from 'lucide-react';
 import TenantSwitcher from './TenantSwitcher';
 
@@ -38,6 +39,13 @@ const navItems: NavItem[] = [
     icon: MessageSquare,
     badge: 'Phase 2 Chat',
     badgeColor: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',
+  },
+  {
+    name: 'RAG Evaluations',
+    href: '/evaluations',
+    icon: BarChart3,
+    badge: 'Phase 8',
+    badgeColor: 'bg-purple-500/10 text-purple-400 border border-purple-500/20',
   },
   {
     name: 'Settings & Team',

@@ -98,6 +98,11 @@ class OpenAIProvider(LLMProvider):
 
                     # Successful response
                     data = response.json()
+                    if isinstance(data, list):
+                        first_item = data[0] if data else {}
+                        err_msg = first_item.get("error", {}).get("message", str(data)) if isinstance(first_item, dict) else str(data)
+                        raise LLMException(f"LLM API returned error: {err_msg}", status_code=response.status_code if response.status_code >= 400 else 502)
+
                     choices = data.get("choices", [])
                     if not choices:
                         raise LLMException("LLM returned empty choices in response", status_code=502)

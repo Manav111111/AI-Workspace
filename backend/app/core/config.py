@@ -1,6 +1,15 @@
 from typing import List, Union
+from pathlib import Path
+from dotenv import load_dotenv
 from pydantic import AnyHttpUrl, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Load backend/.env with override=True so workspace configuration takes precedence over stale OS environment variables
+_env_path = Path(__file__).resolve().parent.parent.parent / ".env"
+if _env_path.exists():
+    load_dotenv(_env_path, override=True)
+else:
+    load_dotenv(override=True)
 
 
 class Settings(BaseSettings):
@@ -27,10 +36,15 @@ class Settings(BaseSettings):
     STORAGE_ROOT: str = "./uploads"
     CHUNK_SIZE: int = 500
     CHUNK_OVERLAP: int = 50
+    CHUNKING_PROVIDER: str = "local"  # "local" | "gemini"
 
     # Embeddings & Vector Search (Qdrant)
-    EMBEDDING_MODEL: str = "all-MiniLM-L6-v2"
+    EMBEDDING_PROVIDER: str = "gemini"  # "gemini" | "cpu" | "mock"
+    EMBEDDING_MODEL: str = "gemini-embedding-001"
     EMBEDDING_DIMENSION: int = 384
+    EMBEDDING_BATCH_SIZE: int = 20
+    EMBEDDING_TIMEOUT_SECONDS: int = 30
+    EMBEDDING_MAX_RETRIES: int = 3
     QDRANT_URL: str = "http://localhost:6333"
     QDRANT_API_KEY: Union[str, None] = None
     QDRANT_COLLECTION_PREFIX: str = "kb_"
@@ -41,11 +55,27 @@ class Settings(BaseSettings):
     RAG_MAX_CONTEXT_CHUNKS: int = 5
     CONVERSATION_HISTORY_MESSAGES: int = 10
 
+    # Phase 9: Hybrid Retrieval & Reranking
+    RETRIEVAL_MODE: str = "dense"  # "dense" | "sparse" | "hybrid"
+    RETRIEVAL_DENSE_TOP_K: int = 10
+    RETRIEVAL_SPARSE_TOP_K: int = 10
+    RETRIEVAL_CANDIDATE_K: int = 20
+    RETRIEVAL_FINAL_TOP_K: int = 5
+    RETRIEVAL_RRF_K: int = 60
+    RERANKER_ENABLED: bool = False
+    RERANKER_PROVIDER: str = "noop"  # "noop" | "cross_encoder" | "heuristic"
+    RERANKER_MODEL: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+    RERANKER_TOP_K: int = 5
+    RERANKER_TIMEOUT_MS: int = 2000
+
+
     # LLM Configuration
-    LLM_PROVIDER: str = "openai"
-    LLM_MODEL: str = "gpt-4o-mini"
+    LLM_PROVIDER: str = "gemini"
+    LLM_MODEL: str = "gemini-3.6-flash"
     OPENAI_API_KEY: Union[str, None] = None
     OPENAI_API_BASE: Union[str, None] = None
+    GEMINI_API_KEY: Union[str, None] = None
+    GOOGLE_API_KEY: Union[str, None] = None
     LLM_TEMPERATURE: float = 0.2
     LLM_MAX_TOKENS: int = 1000
     LLM_TIMEOUT_SECONDS: int = 60
@@ -74,7 +104,7 @@ class Settings(BaseSettings):
         raise ValueError(v)
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=str(_env_path),
         env_file_encoding="utf-8",
         case_sensitive=True,
         extra="ignore",

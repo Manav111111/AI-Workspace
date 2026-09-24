@@ -1,7 +1,14 @@
-import fitz  # PyMuPDF
 from typing import List
 from app.core.exceptions import ValidationException
 from app.services.parsers.base import DocumentParser, ParsedSection
+
+try:
+    import pymupdf as fitz  # PyMuPDF modern import
+except ImportError:
+    try:
+        import fitz  # Legacy fallback
+    except ImportError:
+        fitz = None
 
 
 class PDFParser(DocumentParser):
@@ -9,6 +16,12 @@ class PDFParser(DocumentParser):
         return file_type.lower() in ["pdf", ".pdf", "application/pdf"]
 
     def parse(self, content: bytes, original_filename: str) -> List[ParsedSection]:
+        if fitz is None:
+            raise ValidationException(
+                "PyMuPDF (fitz) is not installed in the current Python environment. "
+                "Please run: pip install pymupdf"
+            )
+
         try:
             doc = fitz.open(stream=content, filetype="pdf")
         except Exception as e:

@@ -7,7 +7,6 @@ from app.core.config import settings
 
 logger = logging.getLogger("app.services.qdrant")
 
-
 _shared_memory_client: Optional[QdrantClient] = None
 
 
@@ -27,28 +26,41 @@ class QdrantService:
             if _shared_memory_client is None:
                 _shared_memory_client = QdrantClient(":memory:")
             self.client = _shared_memory_client
+        elif not settings.QDRANT_URL.startswith("http"):
+            if _shared_memory_client is None:
+                _shared_memory_client = QdrantClient(path=settings.QDRANT_URL)
+            self.client = _shared_memory_client
         else:
             try:
                 self.client = QdrantClient(
                     url=settings.QDRANT_URL,
                     api_key=settings.QDRANT_API_KEY,
-                    timeout=1.0,
+                    timeout=30.0,
                 )
                 # Quick test connection
                 self.client.get_collections()
             except Exception as e:
-                logger.warning(
-                    f"Could not connect to live Qdrant at {settings.QDRANT_URL} ({e}). "
-                    "Falling back to shared in-memory QdrantClient."
-                )
-                if _shared_memory_client is None:
-                    _shared_memory_client = QdrantClient(":memory:")
-                self.client = _shared_memory_client
+                # In test environment, permit in-memory fallback
+                if settings.ENVIRONMENT == "test":
+                    logger.warning(
+                        f"Test environment: could not connect to live Qdrant ({e}). Falling back to :memory:."
+                    )
+                    if _shared_memory_client is None:
+                        _shared_memory_client = QdrantClient(":memory:")
+                    self.client = _shared_memory_client
+                else:
+                    logger.error(
+                        f"CRITICAL: Failed to connect to configured Qdrant endpoint ({settings.QDRANT_URL}). "
+                        "Silent fallback to :memory: is forbidden in non-test environments."
+                    )
+                    raise RuntimeError(f"Qdrant connection failure at {settings.QDRANT_URL}: {e}")
 
         self.ensure_collection()
 
     def ensure_collection(self) -> None:
-        """Ensures the collection exists with cosine distance and payload index on company_id."""
+        """Ensures the collection exists with cosine distance and payload indexes.
+        CRITICAL: Never automatically mutates or recreates collection on dimension mismatch.
+        """
         try:
             collections = self.client.get_collections().collections
             exists = any(c.name == self.collection_name for c in collections)
@@ -60,27 +72,42 @@ class QdrantService:
                         distance=qmodels.Distance.COSINE,
                     ),
                 )
-                # Create payload index on company_id for high-performance multi-tenant filtering
-                self.client.create_payload_index(
-                    collection_name=self.collection_name,
-                    field_name="company_id",
-                    field_schema=qmodels.PayloadSchemaType.KEYWORD,
-                )
-                self.client.create_payload_index(
-                    collection_name=self.collection_name,
-                    field_name="document_id",
-                    field_schema=qmodels.PayloadSchemaType.KEYWORD,
-                )
+            else:
+                # Validate existing collection dimension invariant
+                col_info = self.client.get_collection(self.collection_name)
+                vec_params = col_info.config.params.vectors
+                col_size = vec_params.size if hasattr(vec_params, "size") else None
+                if col_size is not None and col_size != self._dim:
+                    raise RuntimeError(
+                        f"Qdrant Dimension Mismatch: Collection '{self.collection_name}' has dimension {col_size}, "
+                        f"but configured dimension is {self._dim} (Model: {settings.EMBEDDING_MODEL}). FAIL FAST. "
+                        f"Do NOT automatically recreate or mutate the collection."
+                    )
+
+            for field in ["company_id", "knowledge_base_id", "document_id"]:
+                try:
+                    self.client.create_payload_index(
+                        collection_name=self.collection_name,
+                        field_name=field,
+                        field_schema=qmodels.PayloadSchemaType.KEYWORD,
+                    )
+                except Exception as idx_err:
+                    logger.debug(f"Payload index on {field} already exists or note: {idx_err}")
         except Exception as e:
-            logger.warning(f"Error checking/creating Qdrant collection ({e}). Re-attempting in-memory.")
-            self.client = QdrantClient(":memory:")
-            self.client.create_collection(
-                collection_name=self.collection_name,
-                vectors_config=qmodels.VectorParams(
-                    size=self._dim,
-                    distance=qmodels.Distance.COSINE,
-                ),
-            )
+            if "Dimension Mismatch" in str(e) or "FAIL FAST" in str(e):
+                raise
+            if settings.ENVIRONMENT == "test":
+                logger.warning(f"Error checking/creating Qdrant collection in test ({e}). Using in-memory.")
+                self.client = QdrantClient(":memory:")
+                self.client.create_collection(
+                    collection_name=self.collection_name,
+                    vectors_config=qmodels.VectorParams(
+                        size=self._dim,
+                        distance=qmodels.Distance.COSINE,
+                    ),
+                )
+            else:
+                raise
 
     def upsert_chunks(
         self,
@@ -90,14 +117,13 @@ class QdrantService:
         chunk_records: List[Dict[str, Any]],
         embeddings: List[List[float]],
     ) -> None:
-        """Upserts document chunk vectors with mandatory tenant payload metadata."""
+        """Upserts document chunk vectors with mandatory tenant payload metadata in bounded batches."""
         if not chunk_records or not embeddings:
             return
 
         points: List[qmodels.PointStruct] = []
         for chunk, vec in zip(chunk_records, embeddings):
             chunk_id = chunk["id"]
-            # Convert UUID to valid string
             point_id = str(chunk_id)
 
             payload = {
@@ -108,8 +134,11 @@ class QdrantService:
                 "chunk_index": chunk.get("chunk_index", 0),
                 "content": chunk.get("content", ""),
                 "token_count": chunk.get("token_count", 0),
+                "embedding_provider": settings.EMBEDDING_PROVIDER,
+                "embedding_model": settings.EMBEDDING_MODEL,
+                "embedding_dimension": settings.EMBEDDING_DIMENSION,
             }
-            # Add any extra metadata from chunk
+            # Add extra metadata from chunk (page_number, header_path, source, title)
             if "chunk_metadata" in chunk and isinstance(chunk["chunk_metadata"], dict):
                 for k, v in chunk["chunk_metadata"].items():
                     if k not in payload:
@@ -123,11 +152,15 @@ class QdrantService:
                 )
             )
 
-        self.client.upsert(
-            collection_name=self.collection_name,
-            points=points,
-            wait=True,
-        )
+        # Upsert in bounded batches of 50
+        batch_size = 50
+        for i in range(0, len(points), batch_size):
+            pts_batch = points[i : i + batch_size]
+            self.client.upsert(
+                collection_name=self.collection_name,
+                points=pts_batch,
+                wait=True,
+            )
 
     def delete_document_vectors(self, company_id: uuid.UUID, document_id: uuid.UUID) -> None:
         """Deletes all vectors belonging to a document, verifying company_id boundary."""
@@ -215,7 +248,6 @@ class QdrantService:
 
         search_filter = qmodels.Filter(must=must_conditions)
 
-        # qdrant-client >= 1.10+ supports query_points or search
         try:
             results = self.client.search(
                 collection_name=self.collection_name,
@@ -233,18 +265,26 @@ class QdrantService:
                 for hit in results
             ]
         except AttributeError:
-            response = self.client.query_points(
-                collection_name=self.collection_name,
-                query=query_vector,
-                query_filter=search_filter,
-                limit=limit,
-                with_payload=True,
-            )
-            return [
-                {
-                    "id": point.id,
-                    "score": point.score,
-                    "payload": point.payload,
-                }
-                for point in response.points
-            ]
+            import time
+            for attempt in range(3):
+                try:
+                    response = self.client.query_points(
+                        collection_name=self.collection_name,
+                        query=query_vector,
+                        query_filter=search_filter,
+                        limit=limit,
+                        with_payload=True,
+                    )
+                    return [
+                        {
+                            "id": point.id,
+                            "score": point.score,
+                            "payload": point.payload,
+                        }
+                        for point in response.points
+                    ]
+                except Exception as ex:
+                    if attempt < 2:
+                        time.sleep(1.0)
+                        continue
+                    raise
