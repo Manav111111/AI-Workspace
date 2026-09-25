@@ -1,11 +1,12 @@
 from typing import List
 import uuid
-from fastapi import APIRouter, Depends, File, Query, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Query, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_tenant_context, require_roles, TenantContext
+from app.core.config import settings
 from app.db.session import get_db
 from app.models.membership import MembershipRole
-from app.schemas.document import DocumentRead
+from app.schemas.document import DocumentRead, DocumentUploadResponse
 from app.schemas.knowledge_base import (
     KnowledgeBaseCreate,
     KnowledgeBaseRead,
@@ -13,6 +14,7 @@ from app.schemas.knowledge_base import (
 )
 from app.services.document import DocumentService
 from app.services.knowledge_base import KnowledgeBaseService
+from app.services.rate_limit import distributed_rate_limiter
 
 router = APIRouter(prefix="/knowledge-bases", tags=["Knowledge Bases"])
 
@@ -83,24 +85,47 @@ async def delete_knowledge_base(
 
 
 # Document endpoints under Knowledge Base
-@router.post("/{kb_id}/documents", response_model=DocumentRead, status_code=status.HTTP_201_CREATED)
+@router.post("/{kb_id}/documents", response_model=DocumentUploadResponse, status_code=status.HTTP_202_ACCEPTED)
 async def upload_document(
     kb_id: uuid.UUID,
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     tenant: TenantContext = Depends(require_roles([MembershipRole.OWNER, MembershipRole.ADMIN])),
     session: AsyncSession = Depends(get_db),
-) -> DocumentRead:
-    """Upload and ingest a document (PDF, DOCX, Markdown, TXT, CSV) into the Knowledge Base."""
+) -> DocumentUploadResponse:
+    """Asynchronously upload and ingest a document into the Knowledge Base. Returns HTTP 202 Accepted immediately."""
+    # Tenant-level upload rate limit
+    distributed_rate_limiter.check_limit(
+        key=f"rl:ingest:upl:{tenant.company_id}",
+        max_requests=settings.RATE_LIMIT_DOCUMENT_UPLOAD_PER_MINUTE,
+        window_seconds=60,
+        action_name="document upload",
+        fail_mode="fail_open_with_local",
+    )
+
     content = await file.read()
     service = DocumentService(session)
-    doc = await service.upload_and_process_document(
+    doc, job = await service.upload_document_async(
         company_id=tenant.company_id,
         knowledge_base_id=kb_id,
         original_filename=file.filename or "unknown",
         content=content,
         mime_type=file.content_type,
     )
-    return DocumentRead.model_validate(doc)
+
+    # Dispatch to background task runner immediately
+    background_tasks.add_task(service.worker.process_job, job.id)
+
+    return DocumentUploadResponse(
+        id=doc.id,
+        document_id=doc.id,
+        job_id=job.id,
+        status=doc.status.value,
+        filename=doc.filename,
+        original_filename=doc.original_filename,
+        file_size=doc.file_size,
+        created_at=doc.created_at,
+    )
 
 
 @router.get("/{kb_id}/documents", response_model=List[DocumentRead])

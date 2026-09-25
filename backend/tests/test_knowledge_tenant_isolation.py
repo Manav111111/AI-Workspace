@@ -44,7 +44,7 @@ async def test_knowledge_and_vector_tenant_isolation(client: AsyncClient):
         files={"file": ("alpha_plan.txt", doc_a_content, "text/plain")},
         headers=headers_a,
     )
-    assert res_doc_a.status_code == 201
+    assert res_doc_a.status_code in (201, 202)
     doc_a_id = res_doc_a.json()["id"]
 
     # -------------------------------------------------------------------------
@@ -81,7 +81,7 @@ async def test_knowledge_and_vector_tenant_isolation(client: AsyncClient):
         files={"file": ("beta_patent.txt", doc_b_content, "text/plain")},
         headers=headers_b,
     )
-    assert res_doc_b.status_code == 201
+    assert res_doc_b.status_code in (201, 202)
     doc_b_id = res_doc_b.json()["id"]
 
     # -------------------------------------------------------------------------

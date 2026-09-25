@@ -4,7 +4,29 @@ export type AIEmployeeStatus = 'DRAFT' | 'ACTIVE' | 'INACTIVE';
 
 export type KnowledgeBaseStatus = 'ACTIVE' | 'INACTIVE';
 
-export type DocumentStatus = 'UPLOADED' | 'PROCESSING' | 'PROCESSED' | 'FAILED' | 'DELETED';
+export type DocumentStatus = 'UPLOADED' | 'QUEUED' | 'PROCESSING' | 'PROCESSED' | 'FAILED' | 'DELETED';
+
+export interface DocumentUploadResponse {
+  document_id: string;
+  job_id: string;
+  status: DocumentStatus;
+  filename: string;
+  file_size: number;
+  created_at: string;
+}
+
+export interface DocumentStatusResponse {
+  document_id: string;
+  job_id?: string | null;
+  status: DocumentStatus;
+  progress_percent: number;
+  current_stage: string;
+  error_code?: string | null;
+  error_message?: string | null;
+  attempt_count: number;
+  created_at: string;
+  updated_at?: string | null;
+}
 
 export interface User {
   id: string;

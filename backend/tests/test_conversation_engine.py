@@ -69,7 +69,7 @@ async def test_end_to_end_rag_grounded_conversation_pipeline(client: AsyncClient
         files={"file": ("refund_policy.txt", io.BytesIO(doc_content.encode("utf-8")), "text/plain")},
         headers=headers,
     )
-    assert upload_res.status_code == 201
+    assert upload_res.status_code in (201, 202)
     doc_id = upload_res.json()["id"]
 
     # Verify Document is PROCESSED and chunks are in Qdrant

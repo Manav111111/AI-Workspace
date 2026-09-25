@@ -17,7 +17,7 @@ from app.services.retrieval.reranker import (
     Reranker,
     get_reranker,
 )
-from app.services.retrieval.sparse import SparseRetriever
+from app.services.retrieval.sparse import SparseRetriever, global_bm25_cache
 
 logger = logging.getLogger("app.services.retrieval")
 
@@ -244,4 +244,5 @@ __all__ = [
     "HeuristicReranker",
     "CrossEncoderReranker",
     "get_reranker",
+    "global_bm25_cache",
 ]

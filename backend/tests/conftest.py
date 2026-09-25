@@ -15,6 +15,10 @@ settings.STORAGE_ROOT = "./test_uploads"
 settings.LLM_PROVIDER = "mock"
 settings.EMBEDDING_PROVIDER = "cpu"
 
+from sqlalchemy.pool import StaticPool
+import app.models  # noqa: F401 - register all models with Base.metadata
+import app.db.session as session_module
+
 from app.main import app
 from app.models.base import Base
 from app.models.company import Company
@@ -27,6 +31,7 @@ TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 test_engine = create_async_engine(
     TEST_DATABASE_URL,
     connect_args={"check_same_thread": False},
+    poolclass=StaticPool,
 )
 
 TestSessionLocal = async_sessionmaker(
@@ -36,6 +41,9 @@ TestSessionLocal = async_sessionmaker(
     autocommit=False,
     autoflush=False,
 )
+
+# Route background tasks and worker sessions to test DB
+session_module.AsyncSessionLocal = TestSessionLocal
 
 
 @pytest_asyncio.fixture(scope="function")

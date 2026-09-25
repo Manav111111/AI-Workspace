@@ -62,12 +62,14 @@ async def test_document_uploads_and_formats(client: AsyncClient):
         files={"file": ("policy.pdf", pdf_bytes, "application/pdf")},
         headers=headers,
     )
-    assert res_pdf.status_code == 201
-    doc_pdf = res_pdf.json()
+    assert res_pdf.status_code in (201, 202)
+    pdf_id = res_pdf.json()["id"]
+    get_pdf = await client.get(f"/api/v1/documents/{pdf_id}", headers=headers)
+    assert get_pdf.status_code == 200
+    doc_pdf = get_pdf.json()
     assert doc_pdf["file_type"] == "pdf"
     assert doc_pdf["status"] == "PROCESSED"
     assert doc_pdf["document_metadata"]["total_chunks"] >= 2
-    pdf_id = doc_pdf["id"]
 
     # 2. Upload DOCX
     docx_bytes = create_sample_docx()
@@ -76,8 +78,10 @@ async def test_document_uploads_and_formats(client: AsyncClient):
         files={"file": ("handbook.docx", docx_bytes, "application/vnd.openxmlformats-officedocument.wordprocessingml.document")},
         headers=headers,
     )
-    assert res_docx.status_code == 201
-    doc_docx = res_docx.json()
+    assert res_docx.status_code in (201, 202)
+    get_docx = await client.get(f"/api/v1/documents/{res_docx.json()['id']}", headers=headers)
+    assert get_docx.status_code == 200
+    doc_docx = get_docx.json()
     assert doc_docx["file_type"] == "docx"
     assert doc_docx["status"] == "PROCESSED"
 
@@ -88,8 +92,10 @@ async def test_document_uploads_and_formats(client: AsyncClient):
         files={"file": ("architecture.md", md_content, "text/markdown")},
         headers=headers,
     )
-    assert res_md.status_code == 201
-    doc_md = res_md.json()
+    assert res_md.status_code in (201, 202)
+    get_md = await client.get(f"/api/v1/documents/{res_md.json()['id']}", headers=headers)
+    assert get_md.status_code == 200
+    doc_md = get_md.json()
     assert doc_md["file_type"] == "md"
     assert doc_md["status"] == "PROCESSED"
 
@@ -100,8 +106,10 @@ async def test_document_uploads_and_formats(client: AsyncClient):
         files={"file": ("notes.txt", txt_content, "text/plain")},
         headers=headers,
     )
-    assert res_txt.status_code == 201
-    doc_txt = res_txt.json()
+    assert res_txt.status_code in (201, 202)
+    get_txt = await client.get(f"/api/v1/documents/{res_txt.json()['id']}", headers=headers)
+    assert get_txt.status_code == 200
+    doc_txt = get_txt.json()
     assert doc_txt["file_type"] == "txt"
     assert doc_txt["status"] == "PROCESSED"
 
@@ -112,8 +120,10 @@ async def test_document_uploads_and_formats(client: AsyncClient):
         files={"file": ("pricing.csv", csv_content, "text/csv")},
         headers=headers,
     )
-    assert res_csv.status_code == 201
-    doc_csv = res_csv.json()
+    assert res_csv.status_code in (201, 202)
+    get_csv = await client.get(f"/api/v1/documents/{res_csv.json()['id']}", headers=headers)
+    assert get_csv.status_code == 200
+    doc_csv = get_csv.json()
     assert doc_csv["file_type"] == "csv"
     assert doc_csv["status"] == "PROCESSED"
 

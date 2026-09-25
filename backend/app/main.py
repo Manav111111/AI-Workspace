@@ -46,6 +46,18 @@ async def lifespan(app: FastAPI):
             await conn.run_sync(_sync_sqlite_schema)
         logger.info("SQLite local database tables and schema synchronized.")
     
+    # Recover any stale jobs from previous server crash
+    try:
+        from app.workers.ingestion_worker import IngestionWorker
+        startup_worker = IngestionWorker()
+        recovered = await startup_worker.recover_stale_jobs(
+            timeout_seconds=settings.INGESTION_JOB_TIMEOUT_SECONDS
+        )
+        if recovered:
+            logger.info(f"IngestionWorker: Recovered {recovered} stale jobs on application startup.")
+    except Exception as e:
+        logger.warning(f"Could not run startup stale job recovery: {e}")
+
     yield
     # Graceful shutdown
     logger.info("Shutting down database engine connections...")

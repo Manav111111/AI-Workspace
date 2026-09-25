@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_db
 from app.core.config import settings
+from app.services.rate_limit import distributed_rate_limiter
 from app.services.voice.factory import VoiceProviderFactory
 from app.services.voice.runtime import VoiceRuntimeManager, VoiceSessionSecurityException
 
@@ -43,8 +44,24 @@ async def voice_stream_websocket(
     """
     await websocket.accept()
 
-    manager = VoiceRuntimeManager(websocket=websocket, session=db)
     client_host = websocket.client.host if websocket.client else "unknown"
+
+    # Distributed Rate Limiting: WebSocket handshake connections per IP
+    conn_res = distributed_rate_limiter.is_allowed(
+        key=f"rl:voice:conn:{client_host}",
+        max_requests=settings.VOICE_RATE_LIMIT_PER_MINUTE,
+        window_seconds=60,
+        fail_mode="fail_closed",
+    )
+    if not conn_res.allowed:
+        logger.warning(f"Voice WS: IP {client_host} exceeded connection rate limit.")
+        await websocket.close(
+            code=status.WS_1008_POLICY_VIOLATION,
+            reason="Rate limit exceeded for voice connections. Please wait before reconnecting.",
+        )
+        return
+
+    manager = VoiceRuntimeManager(websocket=websocket, session=db)
 
     try:
         # Step 1: Wait for initial authentication handshake

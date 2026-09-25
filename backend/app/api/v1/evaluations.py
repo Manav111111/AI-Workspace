@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.api.deps import get_tenant_context, require_roles, TenantContext
+from app.core.config import settings
 from app.db.session import get_db
 from app.models.evaluation import EvaluationRun, EvaluationResultItem
 from app.models.membership import MembershipRole
@@ -18,6 +19,7 @@ from app.schemas.evaluation import (
 from app.services.evaluation.baseline import BaselineManager
 from app.services.evaluation.dataset import DatasetValidator, GoldenQueryItem
 from app.services.evaluation.runner import EvaluationRunner, ReportGenerator
+from app.services.rate_limit import distributed_rate_limiter
 
 router = APIRouter(prefix="/evaluations", tags=["Evaluations"])
 
@@ -31,6 +33,15 @@ async def run_evaluation(
     session: AsyncSession = Depends(get_db),
 ) -> EvaluationDetailResponse:
     """Trigger an automated RAG evaluation benchmark run against the tenant's AI Employee."""
+    # Tenant-level evaluation rate limit (fail-closed to protect expensive LLM judge quota)
+    distributed_rate_limiter.check_limit(
+        key=f"rl:eval:run:{tenant.company_id}",
+        max_requests=settings.RATE_LIMIT_EVALUATION_RUN_PER_HOUR,
+        window_seconds=3600,
+        action_name="evaluation benchmark run",
+        fail_mode="fail_closed",
+    )
+
     # Load dataset
     if payload.custom_dataset_items:
         dataset = DatasetValidator.validate_items(payload.custom_dataset_items)

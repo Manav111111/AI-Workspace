@@ -53,17 +53,32 @@ def register_exception_handlers(app: FastAPI) -> None:
             code = "UNAUTHORIZED"
         elif exc.status_code == 403:
             code = "FORBIDDEN"
+        elif exc.status_code == 429:
+            code = "RATE_LIMITED"
 
-        message = str(exc.detail) if exc.detail else "An HTTP error occurred"
-        return JSONResponse(
-            status_code=exc.status_code,
-            content={
+        if isinstance(exc.detail, dict):
+            content = {
+                "detail": exc.detail,
+                "error": {
+                    "code": exc.detail.get("error", code),
+                    "message": exc.detail.get("message", "An HTTP error occurred"),
+                    "details": exc.detail,
+                },
+            }
+        else:
+            message = str(exc.detail) if exc.detail else "An HTTP error occurred"
+            content = {
                 "error": {
                     "code": code,
                     "message": message,
                     "details": None,
                 }
-            },
+            }
+
+        return JSONResponse(
+            status_code=exc.status_code,
+            content=content,
+            headers=getattr(exc, "headers", None),
         )
 
     @app.exception_handler(Exception)

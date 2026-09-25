@@ -19,6 +19,7 @@ import {
   Layers,
   Database,
   Info,
+  RotateCcw,
 } from 'lucide-react';
 
 export default function KnowledgeBasePage() {
@@ -81,6 +82,20 @@ export default function KnowledgeBasePage() {
     }
   }, [selectedKb]);
 
+  // Auto-polling for active background ingestion jobs
+  useEffect(() => {
+    const hasActiveDocs = documents.some(
+      (d) => d.status === 'PROCESSING' || d.status === 'QUEUED'
+    );
+    if (!hasActiveDocs || !selectedKb) return;
+
+    const interval = setInterval(() => {
+      loadDocuments(selectedKb.id);
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [documents, selectedKb]);
+
   const handleCreateKb = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newKbName.trim()) return;
@@ -123,7 +138,7 @@ export default function KnowledgeBasePage() {
 
     try {
       const doc = await api.uploadDocument(selectedKb.id, file);
-      setSuccess(`Document "${doc.original_filename}" uploaded and processed successfully`);
+      setSuccess(`Document "${file.name}" accepted. Ingestion processing in background.`);
       await loadDocuments(selectedKb.id);
     } catch (err: any) {
       setError(err.message || 'Upload failed');
@@ -132,6 +147,19 @@ export default function KnowledgeBasePage() {
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
+    }
+  };
+
+  const handleRetryDoc = async (doc: DocumentItem) => {
+    try {
+      setError(null);
+      await api.retryDocumentIngestion(doc.id);
+      setSuccess(`Re-queued ingestion for "${doc.original_filename}"`);
+      if (selectedKb) {
+        await loadDocuments(selectedKb.id);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Retry failed');
     }
   };
 
@@ -359,26 +387,43 @@ export default function KnowledgeBasePage() {
 
                           <div className="flex items-center gap-3">
                             <span
-                              className={`text-[10px] px-2 py-0.5 rounded-full font-mono uppercase font-semibold ${
+                              className={`text-[10px] px-2 py-0.5 rounded-full font-mono uppercase font-semibold flex items-center gap-1.5 ${
                                 doc.status === 'PROCESSED'
                                   ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
                                   : doc.status === 'PROCESSING'
-                                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20 animate-pulse'
+                                  : doc.status === 'QUEUED'
+                                  ? 'bg-sky-500/10 text-sky-400 border border-sky-500/20'
                                   : doc.status === 'FAILED'
                                   ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
                                   : 'bg-slate-500/10 text-slate-400 border border-slate-500/20'
                               }`}
                             >
+                              {(doc.status === 'PROCESSING' || doc.status === 'QUEUED') && (
+                                <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                              )}
                               {doc.status}
                             </span>
 
-                            <button
-                              onClick={() => handleInspectChunks(doc)}
-                              className="p-1.5 text-slate-400 hover:text-indigo-300 hover:bg-slate-700 rounded transition-colors"
-                              title="Inspect Extracted Chunks"
-                            >
-                              <Layers className="w-4 h-4" />
-                            </button>
+                            {doc.status === 'FAILED' && (
+                              <button
+                                onClick={() => handleRetryDoc(doc)}
+                                className="p-1.5 text-slate-400 hover:text-amber-300 hover:bg-slate-700 rounded transition-colors"
+                                title="Retry Ingestion Pipeline"
+                              >
+                                <RotateCcw className="w-4 h-4" />
+                              </button>
+                            )}
+
+                            {doc.status === 'PROCESSED' && (
+                              <button
+                                onClick={() => handleInspectChunks(doc)}
+                                className="p-1.5 text-slate-400 hover:text-indigo-300 hover:bg-slate-700 rounded transition-colors"
+                                title="Inspect Extracted Chunks"
+                              >
+                                <Layers className="w-4 h-4" />
+                              </button>
+                            )}
 
                             <button
                               onClick={() => handleDeleteDoc(doc)}

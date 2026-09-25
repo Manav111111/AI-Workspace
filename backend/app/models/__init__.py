@@ -25,6 +25,7 @@ from app.models.public_session import PublicChatSession
 from app.models.public_usage import PublicUsageEvent
 from app.models.voice_session import VoiceSession, VoiceSessionStatus
 from app.models.evaluation import EvaluationRun, EvaluationResultItem
+from app.models.ingestion_job import IngestionJob, IngestionJobStatus, IngestionStage
 
 __all__ = [
     "Base",
@@ -60,4 +61,7 @@ __all__ = [
     "VoiceSessionStatus",
     "EvaluationRun",
     "EvaluationResultItem",
+    "IngestionJob",
+    "IngestionJobStatus",
+    "IngestionStage",
 ]
