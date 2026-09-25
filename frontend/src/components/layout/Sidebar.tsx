@@ -12,6 +12,10 @@ import {
   Settings,
   Sparkles,
   BarChart3,
+  FlaskConical,
+  Activity,
+  Coins,
+  ShieldCheck,
 } from 'lucide-react';
 import TenantSwitcher from './TenantSwitcher';
 
@@ -27,6 +31,13 @@ const navItems: NavItem[] = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'AI Employees', href: '/ai-employees', icon: Bot },
   {
+    name: 'Playground',
+    href: '/playground',
+    icon: FlaskConical,
+    badge: 'Phase 12',
+    badgeColor: 'bg-amber-500/10 text-amber-400 border border-amber-500/20',
+  },
+  {
     name: 'Knowledge Base',
     href: '/knowledge',
     icon: BookOpen,
@@ -41,6 +52,20 @@ const navItems: NavItem[] = [
     badgeColor: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',
   },
   {
+    name: 'Observability',
+    href: '/observability',
+    icon: Activity,
+    badge: 'Phase 11',
+    badgeColor: 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20',
+  },
+  {
+    name: 'Usage & Budgets',
+    href: '/usage',
+    icon: Coins,
+    badge: 'Phase 13',
+    badgeColor: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',
+  },
+  {
     name: 'RAG Evaluations',
     href: '/evaluations',
     icon: BarChart3,
@@ -48,11 +73,19 @@ const navItems: NavItem[] = [
     badgeColor: 'bg-purple-500/10 text-purple-400 border border-purple-500/20',
   },
   {
+    name: 'Audit Logs',
+    href: '/audit',
+    icon: ShieldCheck,
+    badge: 'Gov',
+    badgeColor: 'bg-rose-500/10 text-rose-400 border border-rose-500/20',
+  },
+  {
     name: 'Settings & Team',
     href: '/settings',
     icon: Settings,
   },
 ];
+
 
 export default function Sidebar() {
   const pathname = usePathname();

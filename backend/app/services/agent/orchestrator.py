@@ -18,6 +18,9 @@ from app.services.llm import get_llm_provider
 from app.services.llm.base import LLMProvider, LLMResponse
 from app.services.prompt_builder import PromptBuilder
 from app.services.retrieval import RetrievalService, RetrievedChunk
+from app.services.observability.tracer import tracer
+from app.services.billing.budget_service import BudgetService
+from app.services.billing.usage_adapter import UsageAdapter
 
 logger = logging.getLogger("app.services.agent.orchestrator")
 
@@ -32,6 +35,10 @@ class AgentExecutionResult:
     retrieval_metadata: Dict[str, Any] = field(default_factory=dict)
     iterations: int = 1
     metrics: Dict[str, Any] = field(default_factory=dict)
+    trace_id: Optional[str] = None
+    total_tokens: int = 0
+    estimated_cost: float = 0.0
+
 
 
 class AgentOrchestrator:
@@ -113,15 +120,25 @@ class AgentOrchestrator:
 
         retrieval_start = time.perf_counter()
         if assigned_kb_ids:
-            retrieved_chunks = await self.retrieval_service.retrieve(
-                company_id=company_id,
-                query=user_query,
-                knowledge_base_ids=assigned_kb_ids,
-            )
-            retrieval_latency_ms = round((time.perf_counter() - retrieval_start) * 1000, 2)
+            async with tracer.start_as_current_span("retrieval", attributes={
+                "assigned_kbs_count": len(assigned_kb_ids),
+                "query_length": len(user_query),
+                "retrieval_mode": getattr(settings, "RETRIEVAL_MODE", "dense"),
+            }) as r_span:
+                retrieved_chunks = await self.retrieval_service.retrieve(
+                    company_id=company_id,
+                    query=user_query,
+                    knowledge_base_ids=assigned_kb_ids,
+                )
+                retrieval_latency_ms = round((time.perf_counter() - retrieval_start) * 1000, 2)
+                r_span.set_attributes({
+                    "chunks_retrieved": len(retrieved_chunks),
+                    "top_score": round(retrieved_chunks[0].score, 4) if retrieved_chunks else 0.0,
+                })
         else:
             retrieved_chunks = []
             retrieval_latency_ms = 0.0
+
         retrieval_metadata = {
             "query": user_query,
             "assigned_kbs_count": len(assigned_kb_ids),
@@ -155,16 +172,21 @@ class AgentOrchestrator:
             ]
 
         # 4. Build Initial Messages
-        messages = PromptBuilder.build_chat_messages(
-            employee_name=ai_employee.name,
-            role=ai_employee.role,
-            personality=ai_employee.personality,
-            custom_system_prompt=ai_employee.system_prompt,
-            context_text=context_text,
-            has_context=has_context,
-            conversation_history=conversation_history,
-            current_user_query=user_query,
-        )
+        with tracer.start_as_current_span("prompt_construction", attributes={
+            "has_context": has_context,
+            "chunks_count": len(retrieved_chunks),
+            "tools_count": len(assigned_tool_names),
+        }):
+            messages = PromptBuilder.build_chat_messages(
+                employee_name=ai_employee.name,
+                role=ai_employee.role,
+                personality=ai_employee.personality,
+                custom_system_prompt=ai_employee.system_prompt,
+                context_text=context_text,
+                has_context=has_context,
+                conversation_history=conversation_history,
+                current_user_query=user_query,
+            )
 
         tool_context = ToolContext(
             company_id=company_id,
@@ -180,19 +202,66 @@ class AgentOrchestrator:
         final_text = ""
         iterations = 0
         total_llm_latency_ms = 0.0
+        total_tokens_accum = 0
+        total_cost_accum = 0.0
         max_iterations = getattr(settings, "AGENT_MAX_ITERATIONS", 5)
+        prov_attr = getattr(self.llm_provider, "provider", None)
+        provider_name = prov_attr if isinstance(prov_attr, str) else getattr(settings, "LLM_PROVIDER", "gemini")
+        mod_attr = getattr(self.llm_provider, "model", None)
+        model_name = mod_attr if isinstance(mod_attr, str) else getattr(settings, "LLM_MODEL", "gemini-3.6-flash")
+
 
         while iterations < max_iterations:
             iterations += 1
 
-            llm_start = time.perf_counter()
-            llm_response: LLMResponse = await self.llm_provider.generate(
-                messages=messages,
-                temperature=settings.LLM_TEMPERATURE,
-                max_tokens=settings.LLM_MAX_TOKENS,
-                tools=tools_def,
-            )
-            total_llm_latency_ms += round((time.perf_counter() - llm_start) * 1000, 2)
+            async with tracer.start_as_current_span("llm_generation", attributes={
+                "iteration": iterations,
+                "provider": provider_name,
+                "model": model_name,
+            }) as llm_span:
+                llm_start = time.perf_counter()
+                llm_response: LLMResponse = await self.llm_provider.generate(
+                    messages=messages,
+                    temperature=settings.LLM_TEMPERATURE,
+                    max_tokens=settings.LLM_MAX_TOKENS,
+                    tools=tools_def,
+                )
+                llm_lat = round((time.perf_counter() - llm_start) * 1000, 2)
+                total_llm_latency_ms += llm_lat
+
+                # Standardize token usage
+                usage_obj = UsageAdapter.extract_usage(
+                    provider=provider_name,
+                    raw_usage=llm_response.usage,
+                    messages=messages,
+                    generated_text=llm_response.content,
+                )
+                llm_span.set_attributes({
+                    "input_tokens": usage_obj.input_tokens,
+                    "output_tokens": usage_obj.output_tokens,
+                    "cached_tokens": usage_obj.cached_tokens,
+                    "total_tokens": usage_obj.total_tokens,
+                    "usage_source": usage_obj.usage_source,
+                })
+
+                # Record in persistent usage ledger
+                try:
+                    ledger_entry = await BudgetService.record_usage(
+                        session=self.session,
+                        company_id=company_id,
+                        ai_employee_id=ai_employee.id,
+                        conversation_id=conversation_id,
+                        trace_id=tracer.get_current_trace_id(),
+                        provider=provider_name,
+                        model=model_name,
+                        operation_type="LLM_GENERATION",
+                        usage=usage_obj,
+                    )
+                    total_tokens_accum += usage_obj.total_tokens
+                    total_cost_accum += float(ledger_entry.estimated_cost)
+                except Exception as ue:
+                    logger.warning(f"Could not record usage ledger entry: {ue}")
+                    total_tokens_accum += usage_obj.total_tokens
 
             # Check if LLM requested tool calls
             if llm_response.tool_calls:
@@ -214,12 +283,19 @@ class AgentOrchestrator:
                     except Exception:
                         args = {}
 
-                    tool_res: ToolResult = await self.tool_executor.execute_tool(
-                        tool_name=fn_name,
-                        arguments=args,
-                        context=tool_context,
-                        assigned_tool_names=assigned_tool_names,
-                    )
+                    async with tracer.start_as_current_span("tool_execution", attributes={
+                        "tool_name": fn_name,
+                    }) as tool_span:
+                        tool_res: ToolResult = await self.tool_executor.execute_tool(
+                            tool_name=fn_name,
+                            arguments=args,
+                            context=tool_context,
+                            assigned_tool_names=assigned_tool_names,
+                        )
+                        tool_span.set_attributes({
+                            "success": tool_res.success,
+                            "error_code": str(tool_res.error_code) if tool_res.error_code else None,
+                        })
 
                     # Check if action requires user confirmation
                     if tool_res.error_code == ToolErrorCode.CONFIRMATION_REQUIRED:
@@ -292,6 +368,8 @@ class AgentOrchestrator:
             "chunks_retrieved": len(retrieved_chunks),
             "iterations": iterations,
             "tool_calls_count": len(tool_calls_executed),
+            "total_tokens": total_tokens_accum,
+            "estimated_cost_usd": round(total_cost_accum, 6),
         }
 
         return AgentExecutionResult(
@@ -303,4 +381,8 @@ class AgentOrchestrator:
             retrieval_metadata=retrieval_metadata,
             iterations=iterations,
             metrics=metrics,
+            trace_id=tracer.get_current_trace_id(),
+            total_tokens=total_tokens_accum,
+            estimated_cost=round(total_cost_accum, 6),
         )
+

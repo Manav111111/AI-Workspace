@@ -66,3 +66,14 @@ class ValidationException(AppException):
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             details=details,
         )
+
+
+class BudgetExceededException(AppException):
+    def __init__(self, message: str = "The configured usage budget has been reached.", details: Optional[Any] = None):
+        super().__init__(
+            message=message,
+            code="BUDGET_EXCEEDED",
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            details=details,
+        )
+

@@ -126,4 +126,6 @@ async def send_message(
         tool_calls=engine_resp.tool_calls,
         pending_confirmation=engine_resp.pending_confirmation,
         metrics=engine_resp.metrics,
+        trace_id=engine_resp.trace_id,
     )
+

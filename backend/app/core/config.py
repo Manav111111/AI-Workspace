@@ -83,6 +83,26 @@ class Settings(BaseSettings):
     RATE_LIMIT_EVALUATION_RUN_PER_HOUR: int = 5
     RATE_LIMIT_DOCUMENT_UPLOAD_PER_MINUTE: int = 10
 
+    # Phase 11: Production Observability & OpenTelemetry
+    OTEL_ENABLED: bool = True
+    OTEL_SERVICE_NAME: str = "avtaar-ai-employee"
+    OTEL_EXPORTER_ENDPOINT: Union[str, None] = None
+    OTEL_EXPORTER_TIMEOUT_MS: int = 2000
+    TRACE_RETENTION_DAYS: int = 30
+    TRACE_CONTENT_CAPTURE_ENABLED: bool = False
+
+    # Phase 12: AI Employee Playground
+    PLAYGROUND_ENABLED: bool = True
+    PLAYGROUND_MAX_CONCURRENT_SESSIONS: int = 10
+    PLAYGROUND_MAX_MESSAGES_PER_SESSION: int = 50
+
+    # Phase 13: Tenant Cost Metering & Budgets
+    USAGE_METERING_ENABLED: bool = True
+    USAGE_COST_ESTIMATION_ENABLED: bool = True
+    BUDGET_ENFORCEMENT_ENABLED: bool = True
+    BUDGET_DEFAULT_SOFT_LIMIT_PERCENT: float = 80.0
+    BUDGET_RESERVATION_TTL_SECONDS: int = 60
+
 
     # LLM Configuration
     LLM_PROVIDER: str = "gemini"

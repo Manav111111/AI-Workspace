@@ -16,6 +16,13 @@ from app.services.llm.base import LLMProvider
 from app.services.prompt_builder import PromptBuilder
 from app.services.retrieval import RetrievalService, RetrievedChunk
 from app.schemas.avatar import map_conversation_context_to_presentation
+from app.services.observability.tracer import (
+    TraceCollector,
+    generate_trace_id,
+    tracer,
+)
+from app.services.observability.metrics import metrics_collector
+from app.services.billing.budget_service import BudgetService
 
 logger = logging.getLogger("app.services.conversation_engine")
 
@@ -32,9 +39,11 @@ class ConversationEngineResponse:
     pending_confirmation: Optional[Dict[str, Any]] = None
     metrics: Dict[str, Any] = field(default_factory=dict)
     presentation: Optional[Dict[str, Any]] = None
+    trace_id: Optional[str] = None
 
 
 class ConversationEngine:
+
     """Central Conversational Engine for AI Employees.
     Completely decoupled from presentation layers (Avatar, Voice, Widget).
     Coordinates:
@@ -90,103 +99,160 @@ class ConversationEngine:
         if not ai_employee:
             raise NotFoundException("AI Employee associated with this conversation was not found")
 
-        # 3. Persist the USER message BEFORE calling orchestrator/LLM
-        user_msg = await self.message_repo.create(
-            conversation_id=conversation_id,
-            company_id=company_id,
-            role=MessageRole.USER,
-            content=query if query else ("Confirmed action" if confirm_action else "Cancelled action"),
-            metadata={
-                "user_id": str(user_id) if user_id else None,
-                "pending_action_id": str(pending_action_id) if pending_action_id else None,
-            },
-        )
-
-        # 4. Fetch recent conversation history
-        history_records = await self.message_repo.get_recent_history(
-            conversation_id=conversation_id,
-            company_id=company_id,
-            limit=settings.CONVERSATION_HISTORY_MESSAGES + 1,
-        )
-        history_formatted = [
-            {"role": m.role.value.lower(), "content": m.content}
-            for m in history_records
-            if m.id != user_msg.id
-        ]
-
-        # 5. Delegate to Agent Orchestrator (combines RAG + assigned tools)
-        from app.services.agent.orchestrator import AgentOrchestrator
-        orchestrator = AgentOrchestrator(
+        # 3. Budget Pre-Check (Enforces spend limits and hard stops)
+        await BudgetService.check_budget(
             session=self.session,
-            llm_provider=self.llm_provider,
-            retrieval_service=self.retrieval_service,
-            context_builder=self.context_builder,
-        )
-
-        agent_res = await orchestrator.execute(
             company_id=company_id,
-            ai_employee=ai_employee,
-            conversation_id=conversation_id,
-            user_query=query,
-            conversation_history=history_formatted,
-            user_id=user_id,
-            pending_action_id=pending_action_id,
-            confirm_action=confirm_action,
+            ai_employee_id=ai_employee.id,
         )
 
-        total_latency_ms = round((time.perf_counter() - total_start) * 1000, 2)
+        trace_id = generate_trace_id()
 
-        # 6. Persist Assistant Response in PostgreSQL
-        assistant_metadata = {
-            "retrieval": {
-                "chunks_count": len(agent_res.retrieved_chunks),
-            },
-            "tools": {
-                "calls_count": len(agent_res.tool_calls_executed),
-                "calls": agent_res.tool_calls_executed,
-            },
-            "pending_confirmation": agent_res.pending_confirmation,
-            "total_latency_ms": total_latency_ms,
-        }
-
-        assistant_msg = await self.message_repo.create(
-            conversation_id=conversation_id,
+        async with TraceCollector(
+            trace_id=trace_id,
             company_id=company_id,
-            role=MessageRole.ASSISTANT,
-            content=agent_res.content,
-            citations=agent_res.citations,
-            metadata=assistant_metadata,
-        )
+            ai_employee_id=ai_employee.id,
+            conversation_id=conversation_id,
+            request_type="CHAT",
+        ) as collector:
+            async with tracer.start_as_current_span(
+                "conversation_engine.respond",
+                trace_id=trace_id,
+                attributes={
+                    "company_id": str(company_id),
+                    "ai_employee_id": str(ai_employee.id),
+                    "conversation_id": str(conversation_id),
+                    "has_pending_action": bool(pending_action_id),
+                },
+            ) as root_span:
+                # 4. Persist the USER message BEFORE calling orchestrator/LLM
+                user_msg = await self.message_repo.create(
+                    conversation_id=conversation_id,
+                    company_id=company_id,
+                    role=MessageRole.USER,
+                    content=query if query else ("Confirmed action" if confirm_action else "Cancelled action"),
+                    metadata={
+                        "user_id": str(user_id) if user_id else None,
+                        "pending_action_id": str(pending_action_id) if pending_action_id else None,
+                        "trace_id": trace_id,
+                    },
+                )
 
-        # 7. Update Conversation Title on First Message
-        if conversation.title == "New Conversation" or conversation.title.startswith("Chat with"):
-            clean_title = query[:40] + ("..." if len(query) > 40 else "")
-            if clean_title:
-                await self.conversation_repo.update_title(conversation_id, company_id, clean_title)
+                # 5. Fetch recent conversation history
+                history_records = await self.message_repo.get_recent_history(
+                    conversation_id=conversation_id,
+                    company_id=company_id,
+                    limit=settings.CONVERSATION_HISTORY_MESSAGES + 1,
+                )
+                history_formatted = [
+                    {"role": m.role.value.lower(), "content": m.content}
+                    for m in history_records
+                    if m.id != user_msg.id
+                ]
 
-        logger.info(
-            f"Agent chat turn complete | company={company_id} | employee={ai_employee.id} "
-            f"| conv={conversation_id} | tools={len(agent_res.tool_calls_executed)} "
-            f"| chunks={len(agent_res.retrieved_chunks)} | total_lat={total_latency_ms}ms"
-        )
+                # 6. Delegate to Agent Orchestrator (combines RAG + assigned tools)
+                from app.services.agent.orchestrator import AgentOrchestrator
+                orchestrator = AgentOrchestrator(
+                    session=self.session,
+                    llm_provider=self.llm_provider,
+                    retrieval_service=self.retrieval_service,
+                    context_builder=self.context_builder,
+                )
 
-        # 8. Deterministic Presentation Metadata for Avatar/Voice Layers
-        tool_names = [tc.get("tool_name") for tc in agent_res.tool_calls_executed] if agent_res.tool_calls_executed else []
-        pres_metadata = map_conversation_context_to_presentation(
-            reply_text=agent_res.content,
-            tool_activity=tool_names,
-            pending_confirmation=agent_res.pending_confirmation,
-            user_query=query,
-        )
+                agent_res = await orchestrator.execute(
+                    company_id=company_id,
+                    ai_employee=ai_employee,
+                    conversation_id=conversation_id,
+                    user_query=query,
+                    conversation_history=history_formatted,
+                    user_id=user_id,
+                    pending_action_id=pending_action_id,
+                    confirm_action=confirm_action,
+                )
 
-        return ConversationEngineResponse(
-            user_message=user_msg,
-            assistant_message=assistant_msg,
-            citations=agent_res.citations,
-            retrieval_count=len(agent_res.retrieved_chunks),
-            retrieval_metadata=agent_res.retrieval_metadata,
-            tool_calls=agent_res.tool_calls_executed,
-            pending_confirmation=agent_res.pending_confirmation,
-            metrics=agent_res.metrics,
-            presentation=pres_metadata.model_dump(),
-        )
+                total_latency_ms = round((time.perf_counter() - total_start) * 1000, 2)
+
+                # 7. Persist Assistant Response in PostgreSQL
+                assistant_metadata = {
+                    "retrieval": {
+                        "chunks_count": len(agent_res.retrieved_chunks),
+                    },
+                    "tools": {
+                        "calls_count": len(agent_res.tool_calls_executed),
+                        "calls": agent_res.tool_calls_executed,
+                    },
+                    "pending_confirmation": agent_res.pending_confirmation,
+                    "total_latency_ms": total_latency_ms,
+                    "trace_id": trace_id,
+                    "total_tokens": agent_res.total_tokens,
+                    "estimated_cost_usd": agent_res.estimated_cost,
+                }
+
+                assistant_msg = await self.message_repo.create(
+                    conversation_id=conversation_id,
+                    company_id=company_id,
+                    role=MessageRole.ASSISTANT,
+                    content=agent_res.content,
+                    citations=agent_res.citations,
+                    metadata=assistant_metadata,
+                )
+
+                # 8. Update Conversation Title on First Message
+                if conversation.title == "New Conversation" or conversation.title.startswith("Chat with"):
+                    clean_title = query[:40] + ("..." if len(query) > 40 else "")
+                    if clean_title:
+                        await self.conversation_repo.update_title(conversation_id, company_id, clean_title)
+
+                # 9. Deterministic Presentation Metadata for Avatar/Voice Layers
+                tool_names = [tc.get("name") or tc.get("tool_name") for tc in agent_res.tool_calls_executed] if agent_res.tool_calls_executed else []
+                pres_metadata = map_conversation_context_to_presentation(
+                    reply_text=agent_res.content,
+                    tool_activity=tool_names,
+                    pending_confirmation=agent_res.pending_confirmation,
+                    user_query=query,
+                )
+
+                root_span.set_attributes({
+                    "chunks_retrieved": len(agent_res.retrieved_chunks),
+                    "tools_count": len(agent_res.tool_calls_executed),
+                    "total_tokens": agent_res.total_tokens,
+                    "estimated_cost_usd": agent_res.estimated_cost,
+                    "total_latency_ms": total_latency_ms,
+                })
+
+            # 10. Persist Trace Summary & Operational Metrics
+            try:
+                collector.set_metadata("total_tokens", agent_res.total_tokens)
+                collector.set_metadata("estimated_cost_usd", agent_res.estimated_cost)
+                trace_summary = collector.build_summary()
+                self.session.add(trace_summary)
+                await self.session.flush()
+            except Exception as te:
+                logger.warning(f"Could not persist trace summary: {te}")
+
+            metrics_collector.record_request(
+                status="SUCCESS",
+                total_latency_ms=total_latency_ms,
+                retrieval_latency_ms=agent_res.metrics.get("retrieval_latency_ms", 0.0),
+                llm_latency_ms=agent_res.metrics.get("llm_latency_ms", 0.0),
+            )
+
+            logger.info(
+                f"Agent chat turn complete | company={company_id} | employee={ai_employee.id} "
+                f"| conv={conversation_id} | trace={trace_id} | tokens={agent_res.total_tokens} "
+                f"| cost=${agent_res.estimated_cost} | total_lat={total_latency_ms}ms"
+            )
+
+            return ConversationEngineResponse(
+                user_message=user_msg,
+                assistant_message=assistant_msg,
+                citations=agent_res.citations,
+                retrieval_count=len(agent_res.retrieved_chunks),
+                retrieval_metadata=agent_res.retrieval_metadata,
+                tool_calls=agent_res.tool_calls_executed,
+                pending_confirmation=agent_res.pending_confirmation,
+                metrics=agent_res.metrics,
+                presentation=pres_metadata.model_dump(),
+                trace_id=trace_id,
+            )
+

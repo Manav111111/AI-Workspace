@@ -12,7 +12,9 @@ class MockLLMProvider(LLMProvider):
     """
 
     def __init__(self, model: str = "mock-grounded-v1"):
+        self.provider = "mock"
         self.model = model
+
 
     async def generate(
         self,

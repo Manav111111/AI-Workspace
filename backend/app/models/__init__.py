@@ -26,6 +26,9 @@ from app.models.public_usage import PublicUsageEvent
 from app.models.voice_session import VoiceSession, VoiceSessionStatus
 from app.models.evaluation import EvaluationRun, EvaluationResultItem
 from app.models.ingestion_job import IngestionJob, IngestionJobStatus, IngestionStage
+from app.models.observability import TraceSummary, AuditEvent
+from app.models.playground import PlaygroundSession, PlaygroundMessage
+from app.models.usage_budget import ModelPricingVersion, UsageLedgerEntry, UsageBudget
 
 __all__ = [
     "Base",
@@ -64,4 +67,12 @@ __all__ = [
     "IngestionJob",
     "IngestionJobStatus",
     "IngestionStage",
+    "TraceSummary",
+    "AuditEvent",
+    "PlaygroundSession",
+    "PlaygroundMessage",
+    "ModelPricingVersion",
+    "UsageLedgerEntry",
+    "UsageBudget",
 ]
+

@@ -58,3 +58,5 @@ class ChatResponse(BaseModel):
     tool_calls: List[Dict[str, Any]] = Field(default_factory=list)
     pending_confirmation: Optional[Dict[str, Any]] = None
     metrics: Dict[str, Any] = Field(default_factory=dict)
+    trace_id: Optional[str] = None
+

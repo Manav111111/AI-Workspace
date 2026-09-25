@@ -23,10 +23,12 @@ class GeminiProvider(LLMProvider):
         model: str = "gemini-3.6-flash",
         timeout_seconds: float = 90.0,
     ):
+        self.provider = "gemini"
         self.api_key = api_key
         self.model = model.replace("models/", "")
         self.timeout = float(timeout_seconds)
         self.base_url = "https://generativelanguage.googleapis.com/v1beta"
+
 
     async def generate(
         self,

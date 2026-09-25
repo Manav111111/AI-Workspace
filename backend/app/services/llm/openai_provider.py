@@ -36,10 +36,12 @@ class OpenAIProvider(LLMProvider):
         model: str = "gpt-4o-mini",
         timeout_seconds: int = 60,
     ):
+        self.provider = "openai"
         self.api_key = api_key
         self.base_url = (base_url or "https://api.openai.com/v1").rstrip("/")
         self.model = model
         self.timeout = float(timeout_seconds)
+
 
     async def generate(
         self,

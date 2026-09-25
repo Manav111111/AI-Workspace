@@ -11,6 +11,9 @@ from app.api.v1.business_data import router as business_data_router
 from app.api.v1.public import router as public_router
 from app.api.v1.voice import router as voice_router
 from app.api.v1.evaluations import router as evaluations_router
+from app.api.v1.observability import router as observability_router
+from app.api.v1.playground import router as playground_router
+from app.api.v1.usage import router as usage_router
 
 api_router = APIRouter()
 
@@ -25,4 +28,8 @@ api_router.include_router(business_data_router)
 api_router.include_router(public_router)
 api_router.include_router(voice_router)
 api_router.include_router(evaluations_router)
+api_router.include_router(observability_router)
+api_router.include_router(playground_router)
+api_router.include_router(usage_router)
+
 

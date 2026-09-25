@@ -345,3 +345,130 @@ export interface EvaluationBaseline {
   created_at?: string | null;
 }
 
+// Phase 11-13: Control Plane Types
+export interface LatencyStats {
+  avg: number;
+  p50: number;
+  p95: number;
+  p99: number;
+}
+
+export interface Span {
+  name: string;
+  trace_id: string;
+  span_id: string;
+  parent_span_id?: string | null;
+  duration_ms: number;
+  status: 'OK' | 'ERROR' | string;
+  status_description?: string | null;
+  attributes: Record<string, any>;
+  events: Array<{ name: string; timestamp: string; attributes?: Record<string, any> }>;
+  start_time: string;
+}
+
+export interface TraceSummary {
+  id: string;
+  company_id: string;
+  ai_employee_id?: string | null;
+  conversation_id?: string | null;
+  trace_id: string;
+  request_type: string;
+  status: 'SUCCESS' | 'ERROR' | string;
+  total_latency_ms: number;
+  spans_count: number;
+  spans_data: Span[];
+  safe_metadata: Record<string, any>;
+  error_message?: string | null;
+  created_at: string;
+}
+
+export interface OperationalMetrics {
+  requests_total: number;
+  requests_success: number;
+  requests_error: number;
+  error_rate_percent: number;
+  budget_denials_total: number;
+  rate_limit_denials_total: number;
+  latencies_ms: {
+    total: LatencyStats;
+    retrieval: LatencyStats;
+    llm: LatencyStats;
+    tools: LatencyStats;
+  };
+}
+
+export interface AuditEvent {
+  id: string;
+  company_id: string;
+  actor_id?: string | null;
+  ai_employee_id?: string | null;
+  event_type: string;
+  resource_type: string;
+  resource_id?: string | null;
+  trace_id?: string | null;
+  safe_metadata: Record<string, any>;
+  created_at: string;
+}
+
+export interface BudgetStatus {
+  id: string;
+  name: string;
+  ai_employee_id?: string | null;
+  period: string;
+  limit_amount: number;
+  current_spend: number;
+  utilization_percent: number;
+  soft_limit_percent: number;
+  hard_limit_enabled: boolean;
+  exceeded: boolean;
+}
+
+export interface UsageSummary {
+  time_window_days: number;
+  requests_count: number;
+  total_tokens: number;
+  input_tokens: number;
+  output_tokens: number;
+  cached_tokens: number;
+  total_estimated_cost: number;
+  currency: string;
+  by_model: Array<{ model: string; tokens: number; estimated_cost: number }>;
+  by_source: Array<{ source: string; tokens: number; requests: number }>;
+  budgets: BudgetStatus[];
+}
+
+export interface UsageLedgerEntry {
+  id: string;
+  company_id: string;
+  ai_employee_id?: string | null;
+  conversation_id?: string | null;
+  trace_id?: string | null;
+  provider: string;
+  model: string;
+  operation_type: string;
+  input_tokens: number;
+  output_tokens: number;
+  cached_tokens: number;
+  total_tokens: number;
+  estimated_cost: number;
+  currency: string;
+  cost_status: string;
+  usage_source: string;
+  created_at: string;
+}
+
+export interface UsageBudget {
+  id: string;
+  company_id: string;
+  ai_employee_id?: string | null;
+  budget_name: string;
+  limit_amount: number;
+  currency: string;
+  period_type: string;
+  soft_limit_percent: number;
+  hard_limit_enabled: boolean;
+  is_active: boolean;
+  created_at: string;
+}
+
+
