@@ -7,15 +7,12 @@ import { AIEmployee, AIEmployeeStatus, KnowledgeBase, ToolDefinition } from '@/t
 import {
   Bot,
   Plus,
-  Settings,
   Trash2,
   Edit2,
-  Sparkles,
   AlertCircle,
   CheckCircle2,
   X,
   Volume2,
-  UserCheck,
   MessageSquare,
   BookOpen,
   ShieldAlert,
@@ -24,7 +21,6 @@ import {
   Square,
   Wrench,
   ShieldCheck,
-  FileCheck,
   Globe,
   Code,
   Copy,
@@ -33,8 +29,13 @@ import {
   Palette,
   Eye,
   User,
-  Loader2,
+  Sparkles,
 } from 'lucide-react';
+import PageHeader from '@/components/ui/PageHeader';
+import Button from '@/components/ui/Button';
+import Badge from '@/components/ui/Badge';
+import { Card, CardContent } from '@/components/ui/Card';
+import EmptyState from '@/components/ui/EmptyState';
 
 export default function AIEmployeesPage() {
   const [employees, setEmployees] = useState<AIEmployee[]>([]);
@@ -59,19 +60,19 @@ export default function AIEmployeesPage() {
   const [selectedKbIds, setSelectedKbIds] = useState<string[]>([]);
   const [selectedToolNames, setSelectedToolNames] = useState<string[]>([]);
 
-  // Phase 5: Voice Configuration Form State
+  // Voice Configuration Form State
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [voiceId, setVoiceId] = useState('alloy');
   const [voiceSpeed, setVoiceSpeed] = useState(1.0);
   const [availableVoices, setAvailableVoices] = useState<import('@/types').VoiceDefinition[]>([]);
 
-  // Phase 6: 3D Avatar Configuration Form State
+  // 3D Avatar Configuration Form State
   const [avatarEnabled, setAvatarEnabled] = useState(true);
   const [avatarPreset, setAvatarPreset] = useState('executive_sarah');
   const [avatarExpression, setAvatarExpression] = useState('approachable');
   const [avatarFraming, setAvatarFraming] = useState('bust');
 
-  // Phase 4: Embed & Widget Customization Modal State
+  // Embed & Widget Customization Modal State
   const [isEmbedModalOpen, setIsEmbedModalOpen] = useState(false);
   const [activeEmbedEmployee, setActiveEmbedEmployee] = useState<AIEmployee | null>(null);
   const [embedData, setEmbedData] = useState<import('@/types').EmployeeEmbedCodeResponse | null>(null);
@@ -80,7 +81,7 @@ export default function AIEmployeesPage() {
   const [isTogglingPublish, setIsTogglingPublish] = useState<string | null>(null);
 
   // Widget Customizer Form State
-  const [widgetPrimaryColor, setWidgetPrimaryColor] = useState('#4f46e5');
+  const [widgetPrimaryColor, setWidgetPrimaryColor] = useState('#FF9D00');
   const [widgetTheme, setWidgetTheme] = useState('dark');
   const [widgetPosition, setWidgetPosition] = useState('bottom-right');
   const [widgetBrandName, setWidgetBrandName] = useState('');
@@ -131,7 +132,7 @@ export default function AIEmployeesPage() {
     setLanguage('en');
     setStatus('DRAFT');
     setSelectedKbIds([]);
-    setSelectedToolNames(['product_search', 'order_lookup']); // Default safe READ tools
+    setSelectedToolNames(['product_search', 'order_lookup']);
     setVoiceEnabled(true);
     setVoiceId(availableVoices.length > 0 ? availableVoices[0].id : 'alloy');
     setVoiceSpeed(1.0);
@@ -271,7 +272,6 @@ export default function AIEmployeesPage() {
     }
   };
 
-  // Phase 4: Publish / Unpublish Toggle Action
   const handleTogglePublish = async (emp: AIEmployee) => {
     setIsTogglingPublish(emp.id);
     setError(null);
@@ -295,7 +295,6 @@ export default function AIEmployeesPage() {
     }
   };
 
-  // Phase 4: Open Embed & Customizer Modal
   const openEmbedModal = async (emp: AIEmployee) => {
     setActiveEmbedEmployee(emp);
     setError(null);
@@ -304,9 +303,8 @@ export default function AIEmployeesPage() {
     setDomainError(null);
     setActiveEmbedTab('snippet');
 
-    // Populate widget configuration defaults from employee
     const wConfig = emp.widget_config || {};
-    setWidgetPrimaryColor(wConfig.primary_color || '#4f46e5');
+    setWidgetPrimaryColor(wConfig.primary_color || '#FF9D00');
     setWidgetTheme(wConfig.theme || 'dark');
     setWidgetPosition(wConfig.position || 'bottom-right');
     setWidgetBrandName(wConfig.brand_name || emp.name);
@@ -322,7 +320,6 @@ export default function AIEmployeesPage() {
     }
   };
 
-  // Phase 4: Copy Snippet to Clipboard
   const handleCopySnippet = async () => {
     if (!embedData?.embed_snippet) return;
     try {
@@ -330,7 +327,6 @@ export default function AIEmployeesPage() {
       setCopiedSnippet(true);
       setTimeout(() => setCopiedSnippet(false), 2500);
     } catch (err) {
-      // Fallback for older browsers
       const textArea = document.createElement('textarea');
       textArea.value = embedData.embed_snippet;
       document.body.appendChild(textArea);
@@ -342,16 +338,12 @@ export default function AIEmployeesPage() {
     }
   };
 
-  // Phase 4: Add Allowed Domain with Validation
   const handleAddDomain = () => {
     setDomainError(null);
     const domain = newDomainInput.trim().toLowerCase();
     if (!domain) return;
 
-    // Clean protocol or path if user pasted full URL
     let clean = domain.replace(/^https?:\/\//, '').replace(/\/.*$/, '').trim();
-
-    // Regex validation for hostname / domain format
     const domainRegex = /^([a-z0-9]+(-[a-z0-9]+)*\.)+[a-z]{2,}$|^localhost(:[0-9]+)?$/i;
     if (!domainRegex.test(clean)) {
       setDomainError('Please enter a valid domain (e.g. example.com, app.example.com, or localhost:3000)');
@@ -371,7 +363,6 @@ export default function AIEmployeesPage() {
     setAllowedDomainsList(allowedDomainsList.filter((d) => d !== domainToRemove));
   };
 
-  // Phase 4: Save Widget Configuration & Allowed Domains
   const handleSaveWidgetConfig = async () => {
     if (!activeEmbedEmployee) return;
     setIsSavingWidgetConfig(true);
@@ -398,297 +389,241 @@ export default function AIEmployeesPage() {
     }
   };
 
-
   return (
-    <div className="space-y-6">
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold text-slate-100">AI Employees</h1>
-            <span className="px-2 py-0.5 text-xs rounded bg-indigo-500/20 text-indigo-400 font-medium border border-indigo-500/30">
-              Role & Knowledge Scoped
-            </span>
-          </div>
-          <p className="mt-1 text-sm text-slate-400">
-            Configure AI personas, behavioral instructions, and assign specific knowledge bases for scoped RAG retrieval.
-          </p>
-        </div>
-
-        <button
-          onClick={openCreateModal}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors shadow-lg shadow-indigo-500/20 self-start sm:self-auto"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Create AI Employee</span>
-        </button>
-      </div>
+    <div className="max-w-7xl mx-auto space-y-7 font-sans">
+      {/* Page Header */}
+      <PageHeader
+        title="AI Employees"
+        description="Configure personas, system directives, assigned knowledge base retrieval scopes, and agent tool execution permissions."
+        badge={<Badge variant="orange">Role &amp; Knowledge Scoped</Badge>}
+        actions={
+          <Button variant="primary" size="sm" icon={Plus} onClick={openCreateModal}>
+            Create AI Employee
+          </Button>
+        }
+      />
 
       {/* Alerts */}
       {error && (
-        <div className="p-4 rounded-lg bg-rose-500/10 border border-rose-500/30 flex items-center gap-3 text-rose-400 text-sm">
-          <AlertCircle className="w-5 h-5 shrink-0" />
+        <div className="p-3.5 rounded-xl bg-rose-950/60 border border-rose-800/50 flex items-center gap-3 text-rose-300 text-xs">
+          <AlertCircle className="w-4 h-4 shrink-0" />
           <span>{error}</span>
         </div>
       )}
 
       {success && (
-        <div className="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center gap-3 text-emerald-400 text-sm">
-          <CheckCircle2 className="w-5 h-5 shrink-0" />
+        <div className="p-3.5 rounded-xl bg-emerald-950/60 border border-emerald-800/50 flex items-center gap-3 text-emerald-300 text-xs">
+          <CheckCircle2 className="w-4 h-4 shrink-0" />
           <span>{success}</span>
         </div>
       )}
 
       {/* Grid of Employees */}
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {[1, 2, 3].map((i) => (
             <div
               key={i}
-              className="h-64 rounded-xl bg-slate-900/40 border border-slate-800 animate-pulse"
+              className="h-64 rounded-xl bg-[#101010] border border-[#262626] animate-pulse"
             />
           ))}
         </div>
       ) : employees.length === 0 ? (
-        <div className="text-center py-16 border border-dashed border-slate-800 rounded-xl bg-slate-900/20">
-          <div className="w-12 h-12 rounded-xl bg-indigo-600/10 text-indigo-400 flex items-center justify-center mx-auto mb-4">
-            <Bot className="w-6 h-6" />
-          </div>
-          <h3 className="text-base font-medium text-slate-200">No AI employees yet</h3>
-          <p className="mt-1 text-sm text-slate-400 max-w-sm mx-auto">
-            Create your first AI employee and grant it access to specific company knowledge bases.
-          </p>
-          <button
-            onClick={openCreateModal}
-            className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Create AI Employee</span>
-          </button>
-        </div>
+        <EmptyState
+          icon={Bot}
+          title="No AI Employees yet"
+          description="Create your first AI employee and configure its assigned knowledge bases and action tools."
+          actionText="Create AI Employee"
+          actionIcon={Plus}
+          onAction={openCreateModal}
+        />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {employees.map((emp) => (
-            <div
-              key={emp.id}
-              className="bg-slate-900/60 border border-slate-800 rounded-xl p-5 hover:border-slate-700 transition-colors flex flex-col justify-between"
-            >
-              <div>
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
-                      <Bot className="w-5 h-5" />
+            <Card key={emp.id} hover className="flex flex-col justify-between">
+              <CardContent className="p-5">
+                <div>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-[#151515] border border-[#262626] flex items-center justify-center text-[#FF9D00] shrink-0">
+                        <Bot className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h3 className="font-display font-semibold text-[#F5F5F5] text-sm tracking-tight">{emp.name}</h3>
+                        <p className="text-xs text-[#FF9D00] font-mono mt-0.5">{emp.role}</p>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="font-semibold text-slate-200 text-sm">{emp.name}</h3>
-                      <p className="text-xs text-indigo-400 font-medium">{emp.role}</p>
+
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <Badge variant={emp.status === 'ACTIVE' ? 'forest' : 'neutral'} dot>
+                        {emp.status}
+                      </Badge>
+                      <Badge variant={emp.is_published ? 'orange' : 'outline'}>
+                        {emp.is_published ? 'Published' : 'Draft'}
+                      </Badge>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1.5">
-                    {/* Deployment Status */}
-                    <span
-                      className={`text-[10px] px-2 py-0.5 rounded font-semibold tracking-wider ${
-                        emp.status === 'ACTIVE'
-                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                          : 'bg-slate-800 text-slate-400'
-                      }`}
-                    >
-                      {emp.status}
-                    </span>
+                  {emp.description && (
+                    <p className="mt-3 text-xs text-[#737373] line-clamp-2 leading-relaxed font-sans">
+                      {emp.description}
+                    </p>
+                  )}
 
-                    {/* Phase 4: Publishing Status Badge */}
-                    <span
-                      className={`text-[10px] px-2 py-0.5 rounded font-semibold tracking-wider flex items-center gap-1 ${
+                  {emp.personality && (
+                    <div className="mt-3 p-2.5 rounded-lg bg-[#151515] border border-[#262626] text-xs">
+                      <span className="font-medium text-[#A1A1AA]">Personality: </span>
+                      <span className="text-[#737373]">{emp.personality}</span>
+                    </div>
+                  )}
+
+                  {/* Scoped Knowledge Access Badge Section */}
+                  <div className="mt-3.5 pt-3 border-t border-[#262626]">
+                    <div className="flex items-center justify-between text-xs mb-1.5">
+                      <span className="text-[#A1A1AA] font-medium flex items-center gap-1.5">
+                        <BookOpen className="w-3.5 h-3.5 text-[#FF9D00]" />
+                        Knowledge Scope:
+                      </span>
+                      <span className="text-[11px] text-[#737373] font-mono">
+                        {emp.assigned_knowledge_bases?.length || 0} assigned
+                      </span>
+                    </div>
+
+                    {emp.assigned_knowledge_bases && emp.assigned_knowledge_bases.length > 0 ? (
+                      <div className="flex flex-wrap gap-1.5 mt-1.5">
+                        {emp.assigned_knowledge_bases.map((kb) => (
+                          <span
+                            key={kb.id}
+                            className="px-2 py-0.5 rounded-md bg-[#151515] border border-[#262626] text-[#F5F5F5] text-[11px] font-medium flex items-center gap-1"
+                          >
+                            <Layers className="w-2.5 h-2.5 text-[#FF9D00]" />
+                            {kb.name}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-[11px] text-[#FFC247] bg-orange-950/40 border border-orange-800/50 px-2 py-1 rounded flex items-center gap-1.5 mt-1">
+                        <ShieldAlert className="w-3 h-3 text-[#FF9D00] shrink-0" />
+                        <span>No knowledge assigned (Pure Persona)</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Assigned Tool Capabilities Badge Section */}
+                  <div className="mt-2.5 pt-2.5 border-t border-[#262626]">
+                    <div className="flex items-center justify-between text-xs mb-1.5">
+                      <span className="text-[#A1A1AA] font-medium flex items-center gap-1.5">
+                        <Wrench className="w-3.5 h-3.5 text-[#FF9D00]" />
+                        Assigned Tools:
+                      </span>
+                      <span className="text-[11px] text-[#737373] font-mono">
+                        {emp.tools?.length || emp.assigned_tools?.length || 0} active
+                      </span>
+                    </div>
+
+                    {(emp.tools && emp.tools.length > 0) || (emp.assigned_tools && emp.assigned_tools.length > 0) ? (
+                      <div className="flex flex-wrap gap-1.5 mt-1">
+                        {(emp.tools || emp.assigned_tools?.map((t) => t.tool_name) || []).map((toolName) => (
+                          <span
+                            key={toolName}
+                            className="px-2 py-0.5 rounded-md bg-[#151515] border border-[#262626] text-[#A1A1AA] text-[10px] font-mono flex items-center gap-1"
+                          >
+                            <ShieldCheck className="w-2.5 h-2.5 text-[#FF9D00]" />
+                            {toolName}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-[11px] text-[#737373] bg-[#151515] border border-[#262626] px-2 py-0.5 rounded flex items-center gap-1.5 mt-1">
+                        <span>Read-only conversation mode</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mt-5 pt-4 border-t border-[#262626] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
+                  <div className="flex items-center gap-2">
+                    <Link
+                      href={`/ai-employees/${emp.id}/chat`}
+                      className="px-3 py-1.5 rounded-lg bg-[#151515] hover:bg-[#1A1A1A] border border-[#262626] hover:border-[#383838] text-[#F5F5F5] text-xs font-semibold flex items-center gap-1.5 transition-editorial"
+                    >
+                      <MessageSquare className="w-3.5 h-3.5 text-[#FF9D00]" />
+                      <span>Chat</span>
+                    </Link>
+
+                    <button
+                      onClick={() => openEmbedModal(emp)}
+                      className="px-3 py-1.5 rounded-lg bg-[#151515] hover:bg-[#1A1A1A] border border-[#262626] hover:border-[#383838] text-[#F5F5F5] text-xs font-semibold flex items-center gap-1.5 transition-editorial"
+                      title="Get Embed Code and Customize Widget"
+                    >
+                      <Code className="w-3.5 h-3.5 text-[#A1A1AA]" />
+                      <span>Widget</span>
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between sm:justify-end gap-2">
+                    <button
+                      onClick={() => handleTogglePublish(emp)}
+                      disabled={isTogglingPublish === emp.id}
+                      className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border flex items-center gap-1.5 transition-editorial ${
                         emp.is_published
-                          ? 'bg-sky-500/15 text-sky-400 border border-sky-500/30'
-                          : 'bg-slate-800/80 text-slate-500 border border-slate-700/50'
-                      }`}
+                          ? 'bg-rose-950/60 hover:bg-rose-900/80 border-rose-800/60 text-rose-300'
+                          : 'bg-orange-950/60 hover:bg-orange-900/80 border-orange-800/60 text-[#FFC247]'
+                      } disabled:opacity-50`}
                     >
-                      <Globe className="w-2.5 h-2.5" />
-                      {emp.is_published ? 'PUBLISHED' : 'UNPUBLISHED'}
-                    </span>
-                  </div>
-
-                </div>
-
-                {emp.description && (
-                  <p className="mt-3 text-xs text-slate-400 line-clamp-2">{emp.description}</p>
-                )}
-
-                {emp.personality && (
-                  <div className="mt-3 p-2.5 rounded-lg bg-slate-800/40 border border-slate-800 text-xs">
-                    <span className="font-medium text-slate-300">Personality: </span>
-                    <span className="text-slate-400">{emp.personality}</span>
-                  </div>
-                )}
-
-                {/* Scoped Knowledge Access Badge Section */}
-                <div className="mt-3.5 pt-3 border-t border-slate-800/80">
-                  <div className="flex items-center justify-between text-xs mb-1.5">
-                    <span className="text-slate-300 font-medium flex items-center gap-1.5">
-                      <BookOpen className="w-3.5 h-3.5 text-indigo-400" />
-                      Knowledge Access:
-                    </span>
-                    <span className="text-[11px] text-slate-400 font-mono">
-                      {emp.assigned_knowledge_bases?.length || 0} assigned
-                    </span>
-                  </div>
-
-                  {emp.assigned_knowledge_bases && emp.assigned_knowledge_bases.length > 0 ? (
-                    <div className="flex flex-wrap gap-1.5 mt-1.5">
-                      {emp.assigned_knowledge_bases.map((kb) => (
-                        <span
-                          key={kb.id}
-                          className="px-2 py-0.5 rounded-md bg-indigo-950/70 border border-indigo-800/60 text-indigo-300 text-[11px] font-medium flex items-center gap-1"
-                        >
-                          <Layers className="w-2.5 h-2.5 text-indigo-400" />
-                          {kb.name}
-                        </span>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-[11px] text-amber-400/80 bg-amber-950/20 border border-amber-900/40 px-2 py-1 rounded flex items-center gap-1.5 mt-1">
-                      <ShieldAlert className="w-3 h-3 text-amber-400 shrink-0" />
-                      <span>No knowledge bases assigned (Pure Persona)</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Assigned Tool Capabilities Badge Section */}
-                <div className="mt-2.5 pt-2.5 border-t border-slate-800/60">
-                  <div className="flex items-center justify-between text-xs mb-1.5">
-                    <span className="text-slate-300 font-medium flex items-center gap-1.5">
-                      <Wrench className="w-3.5 h-3.5 text-emerald-400" />
-                      Assigned Tools:
-                    </span>
-                    <span className="text-[11px] text-slate-400 font-mono">
-                      {emp.tools?.length || emp.assigned_tools?.length || 0} active
-                    </span>
-                  </div>
-
-                  {(emp.tools && emp.tools.length > 0) || (emp.assigned_tools && emp.assigned_tools.length > 0) ? (
-                    <div className="flex flex-wrap gap-1.5 mt-1">
-                      {(emp.tools || emp.assigned_tools?.map((t) => t.tool_name) || []).map((toolName) => (
-                        <span
-                          key={toolName}
-                          className="px-2 py-0.5 rounded-md bg-emerald-950/60 border border-emerald-800/50 text-emerald-300 text-[10px] font-mono flex items-center gap-1"
-                        >
-                          <ShieldCheck className="w-2.5 h-2.5 text-emerald-400" />
-                          {toolName}
-                        </span>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-[11px] text-slate-400 bg-slate-800/40 border border-slate-700/40 px-2 py-0.5 rounded flex items-center gap-1.5 mt-1">
-                      <span>No tools assigned (Read-only chat)</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Platform Capabilities */}
-                <div className="mt-3 flex items-center gap-2">
-                  <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded bg-slate-800 text-slate-400">
-                    <UserCheck className="w-3 h-3 text-indigo-400" />
-                    Lang: {emp.language}
-                  </span>
-                  <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded bg-slate-800 text-slate-400">
-                    <Volume2 className="w-3 h-3 text-purple-400" />
-                    Voice Ready
-                  </span>
-                  <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded bg-slate-800 text-slate-400">
-                    <User className="w-3 h-3 text-sky-400" />
-                    Avatar 3D
-                  </span>
-                </div>
-              </div>
-
-              <div className="mt-5 pt-4 border-t border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
-                <div className="flex items-center gap-2">
-                  <Link
-                    href={`/ai-employees/${emp.id}/chat`}
-                    className="px-3 py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 hover:text-white text-xs font-medium flex items-center gap-1.5 transition-colors"
-                  >
-                    <MessageSquare className="w-3.5 h-3.5 text-indigo-400" />
-                    <span>Chat</span>
-                  </Link>
-
-                  {/* Phase 4: Embed & Widget Configuration Button */}
-                  <button
-                    onClick={() => openEmbedModal(emp)}
-                    className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 hover:text-white text-xs font-medium flex items-center gap-1.5 transition-colors"
-                    title="Get Embed Code and Customize Widget"
-                  >
-                    <Code className="w-3.5 h-3.5 text-sky-400" />
-                    <span>Embed & Widget</span>
-                  </button>
-                </div>
-
-                <div className="flex items-center justify-between sm:justify-end gap-2">
-                  {/* Phase 4: Publish / Unpublish Toggle Action */}
-                  <button
-                    onClick={() => handleTogglePublish(emp)}
-                    disabled={isTogglingPublish === emp.id}
-                    className={`px-2.5 py-1.5 rounded-lg text-xs font-medium border flex items-center gap-1.5 transition-all ${
-                      emp.is_published
-                        ? 'bg-rose-950/40 hover:bg-rose-900/60 border-rose-800/60 text-rose-300'
-                        : 'bg-emerald-950/40 hover:bg-emerald-900/60 border-emerald-800/60 text-emerald-300'
-                    } disabled:opacity-50`}
-                    title={emp.is_published ? 'Disable public website widget access' : 'Enable public website widget access'}
-                  >
-                    <Globe className="w-3.5 h-3.5" />
-                    <span>
-                      {isTogglingPublish === emp.id
-                        ? 'Updating...'
-                        : emp.is_published
-                        ? 'Unpublish'
-                        : 'Publish'}
-                    </span>
-                  </button>
-
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => openEditModal(emp)}
-                      className="p-1.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded transition-colors"
-                      title="Edit Employee & Knowledge Access"
-                    >
-                      <Edit2 className="w-4 h-4" />
+                      <Globe className="w-3.5 h-3.5" />
+                      <span>
+                        {isTogglingPublish === emp.id
+                          ? 'Updating...'
+                          : emp.is_published
+                          ? 'Unpublish'
+                          : 'Publish'}
+                      </span>
                     </button>
-                    <button
-                      onClick={() => handleDelete(emp.id, emp.name)}
-                      className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded transition-colors"
-                      title="Delete Employee"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => openEditModal(emp)}
+                        className="p-1.5 text-[#737373] hover:text-[#F5F5F5] hover:bg-[#151515] rounded transition-editorial"
+                        title="Edit Employee"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(emp.id, emp.name)}
+                        className="p-1.5 text-[#737373] hover:text-rose-400 hover:bg-[#151515] rounded transition-editorial"
+                        title="Delete Employee"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-
-            </div>
+              </CardContent>
+            </Card>
           ))}
         </div>
       )}
 
-      {/* Create / Edit Modal with Knowledge Access Checklist */}
+      {/* Create / Edit Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-800">
-              <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-indigo-400" />
-                {editingEmployee ? 'Edit AI Employee' : 'Create New AI Employee'}
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#101010] border border-[#262626] rounded-xl w-full max-w-2xl p-6 shadow-card max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-4 border-b border-[#262626]">
+              <h2 className="text-base font-display font-bold text-[#F5F5F5] flex items-center gap-2">
+                <Bot className="w-4 h-4 text-[#FF9D00]" />
+                <span>{editingEmployee ? 'Edit AI Employee' : 'Create AI Employee'}</span>
               </h2>
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="text-slate-400 hover:text-white"
+                className="text-[#737373] hover:text-[#F5F5F5] p-1 rounded-lg hover:bg-[#151515] transition-editorial"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
             {modalError && (
-              <div className="mt-4 p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 flex items-center gap-2 text-rose-400 text-xs">
+              <div className="mt-4 p-3 rounded-lg bg-rose-950/60 border border-rose-800/50 flex items-center gap-2 text-rose-300 text-xs">
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>{modalError}</span>
               </div>
@@ -697,7 +632,7 @@ export default function AIEmployeesPage() {
             <form onSubmit={handleSave} className="mt-4 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">
+                  <label className="block text-xs font-semibold text-[#A1A1AA] mb-1.5">
                     Employee Name *
                   </label>
                   <input
@@ -705,53 +640,53 @@ export default function AIEmployeesPage() {
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g. Alex, Maya"
-                    className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    placeholder="e.g. Maya, Alex"
+                    className="w-full px-3.5 py-2 bg-[#151515] border border-[#262626] rounded-lg text-xs text-[#F5F5F5] focus:outline-none focus:ring-1 focus:ring-[#FF9D00]/40 focus:border-[#FF9D00]"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">
-                    Role / Job Title *
+                  <label className="block text-xs font-semibold text-[#A1A1AA] mb-1.5">
+                    Role / Mandate *
                   </label>
                   <input
                     type="text"
                     required
                     value={role}
                     onChange={(e) => setRole(e.target.value)}
-                    placeholder="e.g. AI Engineer, HR Specialist"
-                    className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    placeholder="e.g. AI Customer Specialist, Technical Support"
+                    className="w-full px-3.5 py-2 bg-[#151515] border border-[#262626] rounded-lg text-xs text-[#F5F5F5] focus:outline-none focus:ring-1 focus:ring-[#FF9D00]/40 focus:border-[#FF9D00]"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">
+                <label className="block text-xs font-semibold text-[#A1A1AA] mb-1.5">
                   Description
                 </label>
                 <input
                   type="text"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Mandate and primary function within the company"
-                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="Mandate and primary function within the organization"
+                  className="w-full px-3.5 py-2 bg-[#151515] border border-[#262626] rounded-lg text-xs text-[#F5F5F5] focus:outline-none focus:ring-1 focus:ring-[#FF9D00]/40 focus:border-[#FF9D00]"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">
-                  Personality & Tone
+                <label className="block text-xs font-semibold text-[#A1A1AA] mb-1.5">
+                  Personality &amp; Tone
                 </label>
                 <input
                   type="text"
                   value={personality}
                   onChange={(e) => setPersonality(e.target.value)}
-                  placeholder="e.g. Friendly, technical, concise, empathetic"
-                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="e.g. Professional, authoritative, empathetic, concise"
+                  className="w-full px-3.5 py-2 bg-[#151515] border border-[#262626] rounded-lg text-xs text-[#F5F5F5] focus:outline-none focus:ring-1 focus:ring-[#FF9D00]/40 focus:border-[#FF9D00]"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">
+                <label className="block text-xs font-semibold text-[#A1A1AA] mb-1.5">
                   System Instructions (Prompt Directives)
                 </label>
                 <textarea
@@ -759,31 +694,31 @@ export default function AIEmployeesPage() {
                   value={systemPrompt}
                   onChange={(e) => setSystemPrompt(e.target.value)}
                   placeholder="Define role behavioral boundaries and instructions..."
-                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-xs"
+                  className="w-full px-3.5 py-2 bg-[#151515] border border-[#262626] rounded-lg text-xs text-[#F5F5F5] focus:outline-none focus:ring-1 focus:ring-[#FF9D00]/40 focus:border-[#FF9D00] font-mono"
                 />
               </div>
 
               {/* KNOWLEDGE ACCESS CHECKLIST */}
-              <div className="p-3.5 rounded-lg bg-slate-800/50 border border-slate-700/80 space-y-2.5">
+              <div className="p-4 rounded-lg bg-[#151515] border border-[#262626] space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-semibold text-slate-200 flex items-center gap-1.5">
-                    <BookOpen className="w-4 h-4 text-indigo-400" />
-                    Knowledge Access (Scoped Retrieval)
+                  <label className="text-xs font-semibold text-[#F5F5F5] flex items-center gap-1.5">
+                    <BookOpen className="w-4 h-4 text-[#FF9D00]" />
+                    <span>Knowledge Access (Scoped Retrieval)</span>
                   </label>
                   {allKnowledgeBases.length > 0 && (
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
                         onClick={selectAllKbs}
-                        className="text-[11px] text-indigo-400 hover:text-indigo-300 font-medium"
+                        className="text-[11px] text-[#FF9D00] hover:text-[#FF6A00] font-semibold"
                       >
                         Select All
                       </button>
-                      <span className="text-slate-600">•</span>
+                      <span className="text-[#262626]">•</span>
                       <button
                         type="button"
                         onClick={clearAllKbs}
-                        className="text-[11px] text-slate-400 hover:text-slate-300"
+                        className="text-[11px] text-[#737373] hover:text-[#A1A1AA]"
                       >
                         Clear
                       </button>
@@ -791,14 +726,14 @@ export default function AIEmployeesPage() {
                   )}
                 </div>
 
-                <p className="text-[11px] text-slate-400">
-                  Select which knowledge bases this AI Employee can retrieve from. Unselected knowledge will never be accessed or leaked.
+                <p className="text-[11px] text-[#737373]">
+                  Select which knowledge bases this AI Employee can retrieve from. Unselected knowledge will never be queried or leaked.
                 </p>
 
                 {allKnowledgeBases.length === 0 ? (
-                  <div className="text-center py-4 bg-slate-900/60 rounded-lg border border-dashed border-slate-800 text-xs text-slate-400">
-                    No knowledge bases found in your company.{' '}
-                    <Link href="/knowledge" className="text-indigo-400 hover:underline">
+                  <div className="text-center py-4 bg-[#101010] rounded-lg border border-dashed border-[#262626] text-xs text-[#737373]">
+                    No knowledge bases created yet.{' '}
+                    <Link href="/knowledge" className="text-[#FF9D00] hover:underline font-semibold">
                       Create a Knowledge Base
                     </Link>{' '}
                     first.
@@ -811,36 +746,30 @@ export default function AIEmployeesPage() {
                         <div
                           key={kb.id}
                           onClick={() => toggleKbSelection(kb.id)}
-                          className={`flex items-center justify-between p-2.5 rounded-lg border cursor-pointer transition-all ${
+                          className={`flex items-center justify-between p-2.5 rounded-lg border cursor-pointer transition-editorial ${
                             isSelected
-                              ? 'bg-indigo-950/40 border-indigo-500/50 text-white'
-                              : 'bg-slate-900/40 border-slate-800 text-slate-300 hover:border-slate-700'
+                              ? 'bg-orange-950/30 border-orange-600/50 text-white'
+                              : 'bg-[#101010] border-[#262626] text-[#A1A1AA] hover:border-[#383838]'
                           }`}
                         >
                           <div className="flex items-center gap-2.5">
                             {isSelected ? (
-                              <CheckSquare className="w-4 h-4 text-indigo-400 shrink-0" />
+                              <CheckSquare className="w-4 h-4 text-[#FF9D00] shrink-0" />
                             ) : (
-                              <Square className="w-4 h-4 text-slate-500 shrink-0" />
+                              <Square className="w-4 h-4 text-[#737373] shrink-0" />
                             )}
                             <div>
-                              <p className="text-xs font-medium leading-tight">{kb.name}</p>
+                              <p className="text-xs font-semibold leading-tight">{kb.name}</p>
                               {kb.description && (
-                                <p className="text-[10px] text-slate-400 line-clamp-1">
+                                <p className="text-[10px] text-[#737373] line-clamp-1">
                                   {kb.description}
                                 </p>
                               )}
                             </div>
                           </div>
-                          <span
-                            className={`text-[9px] px-1.5 py-0.5 rounded font-mono ${
-                              isSelected
-                                ? 'bg-indigo-500/20 text-indigo-300'
-                                : 'bg-slate-800 text-slate-500'
-                            }`}
-                          >
-                            {isSelected ? 'ACCESS GRANTED' : 'NO ACCESS'}
-                          </span>
+                          <Badge variant={isSelected ? 'orange' : 'outline'}>
+                            {isSelected ? 'Granted' : 'No Access'}
+                          </Badge>
                         </div>
                       );
                     })}
@@ -849,26 +778,26 @@ export default function AIEmployeesPage() {
               </div>
 
               {/* TOOL CAPABILITIES ACCESS CHECKLIST */}
-              <div className="p-3.5 rounded-lg bg-slate-800/50 border border-slate-700/80 space-y-2.5">
+              <div className="p-4 rounded-lg bg-[#151515] border border-[#262626] space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-semibold text-slate-200 flex items-center gap-1.5">
-                    <Wrench className="w-4 h-4 text-emerald-400" />
-                    Agent Capabilities & Tools (Action Boundary)
+                  <label className="text-xs font-semibold text-[#F5F5F5] flex items-center gap-1.5">
+                    <Wrench className="w-4 h-4 text-[#FF9D00]" />
+                    <span>Agent Tools (Execution Boundary)</span>
                   </label>
                   {allTools.length > 0 && (
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
                         onClick={selectAllTools}
-                        className="text-[11px] text-emerald-400 hover:text-emerald-300 font-medium"
+                        className="text-[11px] text-[#FF9D00] hover:text-[#FF6A00] font-semibold"
                       >
                         Select All
                       </button>
-                      <span className="text-slate-600">•</span>
+                      <span className="text-[#262626]">•</span>
                       <button
                         type="button"
                         onClick={clearAllTools}
-                        className="text-[11px] text-slate-400 hover:text-slate-300"
+                        className="text-[11px] text-[#737373] hover:text-[#A1A1AA]"
                       >
                         Clear
                       </button>
@@ -876,13 +805,13 @@ export default function AIEmployeesPage() {
                   )}
                 </div>
 
-                <p className="text-[11px] text-slate-400">
-                  Select tools this employee can execute. READ actions run automatically; WRITE actions require human confirmation. Unassigned tools cannot be invoked.
+                <p className="text-[11px] text-[#737373]">
+                  Select tools this employee can execute. READ actions run automatically; WRITE actions require explicit human confirmation.
                 </p>
 
                 {allTools.length === 0 ? (
-                  <div className="text-center py-3 bg-slate-900/60 rounded-lg border border-dashed border-slate-800 text-xs text-slate-400">
-                    No tools registered in the platform yet.
+                  <div className="text-center py-3 bg-[#101010] rounded-lg border border-dashed border-[#262626] text-xs text-[#737373]">
+                    No tools registered.
                   </div>
                 ) : (
                   <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
@@ -893,45 +822,33 @@ export default function AIEmployeesPage() {
                         <div
                           key={t.name}
                           onClick={() => toggleToolSelection(t.name)}
-                          className={`flex items-start justify-between p-2.5 rounded-lg border cursor-pointer transition-all ${
+                          className={`flex items-start justify-between p-2.5 rounded-lg border cursor-pointer transition-editorial ${
                             isSelected
-                              ? 'bg-emerald-950/30 border-emerald-500/50 text-white'
-                              : 'bg-slate-900/40 border-slate-800 text-slate-300 hover:border-slate-700'
+                              ? 'bg-orange-950/30 border-orange-600/50 text-white'
+                              : 'bg-[#101010] border-[#262626] text-[#A1A1AA] hover:border-[#383838]'
                           }`}
                         >
                           <div className="flex items-start gap-2.5">
                             {isSelected ? (
-                              <CheckSquare className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                              <CheckSquare className="w-4 h-4 text-[#FF9D00] shrink-0 mt-0.5" />
                             ) : (
-                              <Square className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />
+                              <Square className="w-4 h-4 text-[#737373] shrink-0 mt-0.5" />
                             )}
                             <div>
                               <div className="flex items-center gap-2">
-                                <p className="text-xs font-mono font-semibold text-emerald-300">{t.name}</p>
-                                <span
-                                  className={`text-[9px] px-1.5 py-0.2 rounded font-bold uppercase tracking-wider ${
-                                    isWrite
-                                      ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                                      : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
-                                  }`}
-                                >
-                                  {isWrite ? 'Write • Confirmation' : 'Read • Auto'}
-                                </span>
+                                <p className="text-xs font-mono font-semibold text-[#FFC247]">{t.name}</p>
+                                <Badge variant={isWrite ? 'orange' : 'neutral'}>
+                                  {isWrite ? 'Write (Confirmation)' : 'Read (Auto)'}
+                                </Badge>
                               </div>
-                              <p className="text-[10px] text-slate-400 mt-0.5 leading-snug">
+                              <p className="text-[10px] text-[#737373] mt-0.5 leading-snug">
                                 {t.description}
                               </p>
                             </div>
                           </div>
-                          <span
-                            className={`text-[9px] px-1.5 py-0.5 rounded font-mono shrink-0 ml-2 ${
-                              isSelected
-                                ? 'bg-emerald-500/20 text-emerald-300'
-                                : 'bg-slate-800 text-slate-500'
-                            }`}
-                          >
-                            {isSelected ? 'ENABLED' : 'DISABLED'}
-                          </span>
+                          <Badge variant={isSelected ? 'orange' : 'outline'}>
+                            {isSelected ? 'Enabled' : 'Disabled'}
+                          </Badge>
                         </div>
                       );
                     })}
@@ -939,12 +856,12 @@ export default function AIEmployeesPage() {
                 )}
               </div>
 
-              {/* PHASE 5: VOICE AI CONFIGURATION */}
-              <div className="p-3.5 rounded-lg bg-slate-800/50 border border-slate-700/80 space-y-3">
+              {/* VOICE AI CONFIGURATION */}
+              <div className="p-4 rounded-lg bg-[#151515] border border-[#262626] space-y-3">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-semibold text-slate-200 flex items-center gap-1.5">
-                    <Volume2 className="w-4 h-4 text-violet-400" />
-                    Voice AI Interface (STT & TTS)
+                  <label className="text-xs font-semibold text-[#F5F5F5] flex items-center gap-1.5">
+                    <Volume2 className="w-4 h-4 text-[#FF9D00]" />
+                    <span>Voice AI Interface (STT &amp; TTS)</span>
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
@@ -953,29 +870,29 @@ export default function AIEmployeesPage() {
                       onChange={(e) => setVoiceEnabled(e.target.checked)}
                       className="sr-only"
                     />
-                    <div className={`w-8 h-4 rounded-full transition-colors relative ${voiceEnabled ? 'bg-violet-600' : 'bg-slate-700'}`}>
-                      <div className={`w-3 h-3 rounded-full bg-white absolute top-0.5 transition-transform ${voiceEnabled ? 'left-4.5' : 'left-0.5'}`} />
+                    <div className={`w-8 h-4 rounded-full transition-colors relative ${voiceEnabled ? 'bg-[#FF9D00]' : 'bg-[#262626]'}`}>
+                      <div className={`w-3 h-3 rounded-full bg-black absolute top-0.5 transition-transform ${voiceEnabled ? 'left-4.5' : 'left-0.5'}`} />
                     </div>
-                    <span className="text-[11px] text-slate-300 font-medium">
+                    <span className="text-[11px] text-[#A1A1AA] font-medium">
                       {voiceEnabled ? 'Enabled' : 'Disabled'}
                     </span>
                   </label>
                 </div>
 
-                <p className="text-[11px] text-slate-400">
+                <p className="text-[11px] text-[#737373]">
                   Enables real-time bidirectional voice conversations via widget using the identical AI Employee brain, knowledge bases, and tools.
                 </p>
 
                 {voiceEnabled && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
                     <div>
-                      <label className="block text-[11px] font-medium text-slate-300 mb-1">
+                      <label className="block text-[11px] font-semibold text-[#A1A1AA] mb-1">
                         Synthesized Voice
                       </label>
                       <select
                         value={voiceId}
                         onChange={(e) => setVoiceId(e.target.value)}
-                        className="w-full px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:ring-2 focus:ring-violet-500"
+                        className="w-full px-3 py-1.5 bg-[#101010] border border-[#262626] rounded-lg text-xs text-white focus:outline-none focus:ring-1 focus:ring-[#FF9D00]/40"
                       >
                         {availableVoices.length > 0 ? (
                           availableVoices.map((v) => (
@@ -997,7 +914,7 @@ export default function AIEmployeesPage() {
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-medium text-slate-300 mb-1">
+                      <label className="block text-[11px] font-semibold text-[#A1A1AA] mb-1">
                         Speech Rate ({voiceSpeed}x)
                       </label>
                       <input
@@ -1007,19 +924,19 @@ export default function AIEmployeesPage() {
                         step="0.05"
                         value={voiceSpeed}
                         onChange={(e) => setVoiceSpeed(parseFloat(e.target.value))}
-                        className="w-full accent-violet-500 cursor-pointer mt-1"
+                        className="w-full accent-[#FF9D00] cursor-pointer mt-1"
                       />
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* PHASE 6: 3D DIGITAL HUMAN AVATAR CONFIGURATION */}
-              <div className="p-3.5 rounded-lg bg-slate-800/50 border border-slate-700/80 space-y-3">
+              {/* 3D DIGITAL HUMAN AVATAR CONFIGURATION */}
+              <div className="p-4 rounded-lg bg-[#151515] border border-[#262626] space-y-3">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-semibold text-slate-200 flex items-center gap-1.5">
-                    <User className="w-4 h-4 text-sky-400" />
-                    3D Digital Human Avatar (Embodied AI)
+                  <label className="text-xs font-semibold text-[#F5F5F5] flex items-center gap-1.5">
+                    <User className="w-4 h-4 text-[#FF9D00]" />
+                    <span>3D Digital Human Avatar (Embodied AI)</span>
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
@@ -1028,29 +945,29 @@ export default function AIEmployeesPage() {
                       onChange={(e) => setAvatarEnabled(e.target.checked)}
                       className="sr-only"
                     />
-                    <div className={`w-8 h-4 rounded-full transition-colors relative ${avatarEnabled ? 'bg-sky-600' : 'bg-slate-700'}`}>
-                      <div className={`w-3 h-3 rounded-full bg-white absolute top-0.5 transition-transform ${avatarEnabled ? 'left-4.5' : 'left-0.5'}`} />
+                    <div className={`w-8 h-4 rounded-full transition-colors relative ${avatarEnabled ? 'bg-[#FF9D00]' : 'bg-[#262626]'}`}>
+                      <div className={`w-3 h-3 rounded-full bg-black absolute top-0.5 transition-transform ${avatarEnabled ? 'left-4.5' : 'left-0.5'}`} />
                     </div>
-                    <span className="text-[11px] text-slate-300 font-medium">
+                    <span className="text-[11px] text-[#A1A1AA] font-medium">
                       {avatarEnabled ? 'Enabled' : 'Disabled'}
                     </span>
                   </label>
                 </div>
 
-                <p className="text-[11px] text-slate-400">
-                  Renders an interactive, client-side WebGL 3D humanoid avatar driven by the unified AI Employee Brain and Voice Runtime with ARKit-grade blendshapes and multi-tiered lip-sync.
+                <p className="text-[11px] text-[#737373]">
+                  Renders an interactive WebGL 3D humanoid avatar driven by the unified AI Employee Brain and Voice Runtime with ARKit-grade blendshapes.
                 </p>
 
                 {avatarEnabled && (
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
                     <div>
-                      <label className="block text-[11px] font-medium text-slate-300 mb-1">
+                      <label className="block text-[11px] font-semibold text-[#A1A1AA] mb-1">
                         Avatar Model Rig
                       </label>
                       <select
                         value={avatarPreset}
                         onChange={(e) => setAvatarPreset(e.target.value)}
-                        className="w-full px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                        className="w-full px-3 py-1.5 bg-[#101010] border border-[#262626] rounded-lg text-xs text-white focus:outline-none focus:ring-1 focus:ring-[#FF9D00]/40"
                       >
                         <option value="executive_sarah">Executive Sarah (Female Rig)</option>
                         <option value="technical_david">Technical David (Male Rig)</option>
@@ -1059,13 +976,13 @@ export default function AIEmployeesPage() {
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-medium text-slate-300 mb-1">
+                      <label className="block text-[11px] font-semibold text-[#A1A1AA] mb-1">
                         Baseline Persona
                       </label>
                       <select
                         value={avatarExpression}
                         onChange={(e) => setAvatarExpression(e.target.value)}
-                        className="w-full px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                        className="w-full px-3 py-1.5 bg-[#101010] border border-[#262626] rounded-lg text-xs text-white focus:outline-none focus:ring-1 focus:ring-[#FF9D00]/40"
                       >
                         <option value="approachable">Approachable (Warm Smile)</option>
                         <option value="professional">Professional (Neutral Focus)</option>
@@ -1074,15 +991,15 @@ export default function AIEmployeesPage() {
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-medium text-slate-300 mb-1">
+                      <label className="block text-[11px] font-semibold text-[#A1A1AA] mb-1">
                         Camera Framing
                       </label>
                       <select
                         value={avatarFraming}
                         onChange={(e) => setAvatarFraming(e.target.value)}
-                        className="w-full px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                        className="w-full px-3 py-1.5 bg-[#101010] border border-[#262626] rounded-lg text-xs text-white focus:outline-none focus:ring-1 focus:ring-[#FF9D00]/40"
                       >
-                        <option value="bust">Bust (Chest & Head)</option>
+                        <option value="bust">Bust (Chest &amp; Head)</option>
                         <option value="close_up">Close-up (Face Only)</option>
                         <option value="half_body">Half-Body (Waist Up)</option>
                       </select>
@@ -1093,13 +1010,13 @@ export default function AIEmployeesPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">
+                  <label className="block text-xs font-semibold text-[#A1A1AA] mb-1.5">
                     Primary Language
                   </label>
                   <select
                     value={language}
                     onChange={(e) => setLanguage(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3 py-2 bg-[#151515] border border-[#262626] rounded-lg text-xs text-[#F5F5F5] focus:outline-none focus:ring-1 focus:ring-[#FF9D00]/40"
                   >
                     <option value="en">English (en)</option>
                     <option value="es">Spanish (es)</option>
@@ -1110,13 +1027,13 @@ export default function AIEmployeesPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">
+                  <label className="block text-xs font-semibold text-[#A1A1AA] mb-1.5">
                     Deployment Status
                   </label>
                   <select
                     value={status}
                     onChange={(e) => setStatus(e.target.value as AIEmployeeStatus)}
-                    className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3 py-2 bg-[#151515] border border-[#262626] rounded-lg text-xs text-[#F5F5F5] focus:outline-none focus:ring-1 focus:ring-[#FF9D00]/40"
                   >
                     <option value="DRAFT">Draft</option>
                     <option value="ACTIVE">Active</option>
@@ -1125,87 +1042,85 @@ export default function AIEmployeesPage() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
-                <button
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#262626]">
+                <Button
                   type="button"
+                  variant="secondary"
+                  size="sm"
                   disabled={isSavingEmployee}
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-300 text-sm font-medium transition-colors"
                 >
                   Cancel
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
-                  disabled={isSavingEmployee}
-                  className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm font-medium transition-colors shadow-lg shadow-indigo-500/20 flex items-center gap-2"
+                  variant="primary"
+                  size="sm"
+                  loading={isSavingEmployee}
                 >
-                  {isSavingEmployee && <Loader2 className="w-4 h-4 animate-spin" />}
-                  {isSavingEmployee
-                    ? (editingEmployee ? 'Saving...' : 'Creating...')
-                    : (editingEmployee ? 'Save Changes' : 'Create AI Employee')}
-                </button>
+                  {editingEmployee ? 'Save Changes' : 'Create AI Employee'}
+                </Button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* Phase 4: Embed & Widget Customizer Modal */}
+      {/* Embed & Widget Customizer Modal */}
       {isEmbedModalOpen && activeEmbedEmployee && (
-        <div className="fixed inset-0 bg-black/75 backdrop-blur-md z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-3xl p-6 shadow-2xl max-h-[92vh] flex flex-col">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#101010] border border-[#262626] rounded-xl w-full max-w-3xl p-6 shadow-card max-h-[92vh] flex flex-col">
             {/* Modal Header */}
-            <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+            <div className="flex items-center justify-between pb-4 border-b border-[#262626]">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-sky-500/10 border border-sky-500/20 text-sky-400 flex items-center justify-center">
-                  <Code className="w-5 h-5" />
+                <div className="w-9 h-9 rounded-lg bg-[#151515] border border-[#262626] text-[#FF9D00] flex items-center justify-center">
+                  <Code className="w-4 h-4" />
                 </div>
                 <div>
-                  <h2 className="text-base font-bold text-white flex items-center gap-2">
-                    <span>Embed & Widget Configuration</span>
-                    <span className="text-xs px-2 py-0.5 rounded bg-sky-950 text-sky-300 font-normal border border-sky-800/40">
-                      {activeEmbedEmployee.name}
-                    </span>
+                  <h2 className="text-base font-display font-bold text-[#F5F5F5] flex items-center gap-2">
+                    <span>Embed &amp; Widget Configuration</span>
+                    <Badge variant="orange">{activeEmbedEmployee.name}</Badge>
                   </h2>
-                  <p className="text-xs text-slate-400">
-                    Deploy your AI Employee to any website via a standalone snippet.
+                  <p className="text-xs text-[#737373]">
+                    Deploy your AI Employee to any website via a standalone script tag.
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setIsEmbedModalOpen(false)}
-                className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+                className="p-1.5 text-[#737373] hover:text-[#F5F5F5] hover:bg-[#151515] rounded-lg transition-editorial"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
             {/* Publishing Warning Banner if Unpublished */}
             {!activeEmbedEmployee.is_published && (
-              <div className="mt-4 p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-3 text-xs text-amber-300">
+              <div className="mt-4 p-3.5 rounded-xl bg-orange-950/60 border border-orange-800/50 flex items-center justify-between gap-3 text-xs text-[#FFC247]">
                 <div className="flex items-center gap-2.5">
-                  <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+                  <AlertCircle className="w-4 h-4 text-[#FF9D00] shrink-0" />
                   <span>
                     This AI Employee is currently <strong>UNPUBLISHED</strong>. Public visitors cannot interact with the widget until published.
                   </span>
                 </div>
-                <button
+                <Button
+                  variant="primary"
+                  size="sm"
                   onClick={() => handleTogglePublish(activeEmbedEmployee)}
-                  className="px-3 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold rounded-lg shrink-0 transition-colors"
                 >
                   Publish Now
-                </button>
+                </Button>
               </div>
             )}
 
             {/* Navigation Tabs */}
-            <div className="flex items-center gap-2 mt-4 border-b border-slate-800 pb-2">
+            <div className="flex items-center gap-2 mt-4 border-b border-[#262626] pb-2">
               <button
                 onClick={() => setActiveEmbedTab('snippet')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-editorial ${
                   activeEmbedTab === 'snippet'
-                    ? 'bg-indigo-600 text-white'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                    ? 'bg-[#151515] text-[#F5F5F5] border border-[#262626] shadow-card'
+                    : 'text-[#737373] hover:text-[#F5F5F5] hover:bg-[#151515]'
                 }`}
               >
                 <Code className="w-3.5 h-3.5" />
@@ -1213,21 +1128,21 @@ export default function AIEmployeesPage() {
               </button>
               <button
                 onClick={() => setActiveEmbedTab('customizer')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-editorial ${
                   activeEmbedTab === 'customizer'
-                    ? 'bg-indigo-600 text-white'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                    ? 'bg-[#151515] text-[#F5F5F5] border border-[#262626] shadow-card'
+                    : 'text-[#737373] hover:text-[#F5F5F5] hover:bg-[#151515]'
                 }`}
               >
                 <Palette className="w-3.5 h-3.5" />
-                <span>Theme & Widget</span>
+                <span>Theme &amp; Widget</span>
               </button>
               <button
                 onClick={() => setActiveEmbedTab('domains')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-editorial ${
                   activeEmbedTab === 'domains'
-                    ? 'bg-indigo-600 text-white'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                    ? 'bg-[#151515] text-[#F5F5F5] border border-[#262626] shadow-card'
+                    : 'text-[#737373] hover:text-[#F5F5F5] hover:bg-[#151515]'
                 }`}
               >
                 <Globe className="w-3.5 h-3.5" />
@@ -1235,10 +1150,10 @@ export default function AIEmployeesPage() {
               </button>
               <button
                 onClick={() => setActiveEmbedTab('preview')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-editorial ${
                   activeEmbedTab === 'preview'
-                    ? 'bg-indigo-600 text-white'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                    ? 'bg-[#151515] text-[#F5F5F5] border border-[#262626] shadow-card'
+                    : 'text-[#737373] hover:text-[#F5F5F5] hover:bg-[#151515]'
                 }`}
               >
                 <Eye className="w-3.5 h-3.5" />
@@ -1252,25 +1167,25 @@ export default function AIEmployeesPage() {
               {activeEmbedTab === 'snippet' && (
                 <div className="space-y-4">
                   <div>
-                    <h3 className="text-sm font-semibold text-slate-200 mb-1">
+                    <h3 className="text-sm font-display font-semibold text-[#F5F5F5] mb-1">
                       HTML Embed Snippet
                     </h3>
-                    <p className="text-xs text-slate-400">
-                      Paste this script into the <code className="text-indigo-300">&lt;head&gt;</code> or bottom of the <code className="text-indigo-300">&lt;body&gt;</code> tag on your website.
+                    <p className="text-xs text-[#737373]">
+                      Paste this script into the <code className="text-[#FF9D00] font-mono">&lt;head&gt;</code> or bottom of the <code className="text-[#FF9D00] font-mono">&lt;body&gt;</code> tag on your website.
                     </p>
                   </div>
 
                   <div className="relative group">
-                    <pre className="p-4 rounded-xl bg-slate-950 border border-slate-800 text-xs font-mono text-indigo-300 overflow-x-auto whitespace-pre leading-relaxed">
+                    <pre className="p-4 rounded-xl bg-[#050505] border border-[#262626] text-xs font-mono text-[#FFC247] overflow-x-auto whitespace-pre leading-relaxed">
                       {embedData?.embed_snippet || 'Loading embed code...'}
                     </pre>
                     <button
                       onClick={handleCopySnippet}
-                      className="absolute top-3 right-3 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium flex items-center gap-1.5 shadow-lg transition-all"
+                      className="absolute top-3 right-3 px-3 py-1.5 rounded-lg bg-[#FF9D00] hover:bg-[#FF6A00] border border-[#FF9D00]/60 text-black text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-editorial"
                     >
                       {copiedSnippet ? (
                         <>
-                          <Check className="w-3.5 h-3.5 text-emerald-300" />
+                          <Check className="w-3.5 h-3.5" />
                           <span>Copied!</span>
                         </>
                       ) : (
@@ -1282,20 +1197,20 @@ export default function AIEmployeesPage() {
                     </button>
                   </div>
 
-                  <div className="p-3.5 rounded-xl bg-slate-800/40 border border-slate-800 text-xs text-slate-400 space-y-2">
-                    <div className="font-semibold text-slate-300 flex items-center gap-2">
-                      <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                      <span>Security & Zero-Config Runtime</span>
+                  <div className="p-3.5 rounded-xl bg-[#151515] border border-[#262626] text-xs text-[#737373] space-y-2">
+                    <div className="font-semibold text-[#F5F5F5] flex items-center gap-2">
+                      <ShieldCheck className="w-4 h-4 text-[#FF9D00]" />
+                      <span>Security &amp; Zero-Config Runtime</span>
                     </div>
-                    <ul className="list-disc list-inside space-y-1 text-slate-400">
-                      <li>Requires zero React or framework dependencies on the client site.</li>
-                      <li>Encapsulated via <strong>Shadow DOM</strong> so styling will not bleed into or conflict with the host site.</li>
-                      <li>Anonymous visitors authenticate via ephemeral Bearer headers with rate limits.</li>
+                    <ul className="list-disc list-inside space-y-1 text-[#A1A1AA]">
+                      <li>Requires zero React or host runtime dependencies on the client site.</li>
+                      <li>Encapsulated via <strong>Shadow DOM</strong> so host CSS cannot cause collisions.</li>
+                      <li>Anonymous visitors authenticate via ephemeral Bearer headers with distributed sliding-window rate limits.</li>
                     </ul>
                   </div>
 
                   <div className="flex items-center justify-between pt-2">
-                    <span className="text-xs text-slate-500 font-mono">
+                    <span className="text-xs text-[#737373] font-mono">
                       Public ID: {embedData?.public_id || 'Generating...'}
                     </span>
                     {embedData?.public_id && (
@@ -1303,7 +1218,7 @@ export default function AIEmployeesPage() {
                         href={`/preview/${embedData.public_id}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
+                        className="text-xs text-[#FF9D00] hover:text-[#FF6A00] flex items-center gap-1 font-semibold"
                       >
                         <span>Open Standalone Preview</span>
                         <ExternalLink className="w-3 h-3" />
@@ -1318,7 +1233,7 @@ export default function AIEmployeesPage() {
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-medium text-slate-300 mb-1">
+                      <label className="block text-xs font-semibold text-[#A1A1AA] mb-1.5">
                         Brand Name / Title
                       </label>
                       <input
@@ -1326,12 +1241,12 @@ export default function AIEmployeesPage() {
                         value={widgetBrandName}
                         onChange={(e) => setWidgetBrandName(e.target.value)}
                         placeholder={activeEmbedEmployee.name}
-                        className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="w-full px-3.5 py-2 bg-[#151515] border border-[#262626] rounded-lg text-xs text-[#F5F5F5] focus:outline-none focus:ring-1 focus:ring-[#FF9D00]/40"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-xs font-medium text-slate-300 mb-1">
+                      <label className="block text-xs font-semibold text-[#A1A1AA] mb-1.5">
                         Brand Accent Color
                       </label>
                       <div className="flex items-center gap-2">
@@ -1345,14 +1260,14 @@ export default function AIEmployeesPage() {
                           type="text"
                           value={widgetPrimaryColor}
                           onChange={(e) => setWidgetPrimaryColor(e.target.value)}
-                          className="flex-1 px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-xs font-mono text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          className="flex-1 px-3.5 py-2 bg-[#151515] border border-[#262626] rounded-lg text-xs font-mono text-[#F5F5F5] focus:outline-none focus:ring-1 focus:ring-[#FF9D00]/40"
                         />
                       </div>
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1">
+                    <label className="block text-xs font-semibold text-[#A1A1AA] mb-1.5">
                       Welcome Message
                     </label>
                     <input
@@ -1360,19 +1275,19 @@ export default function AIEmployeesPage() {
                       value={widgetWelcomeMsg}
                       onChange={(e) => setWidgetWelcomeMsg(e.target.value)}
                       placeholder="Hi! How can I help you today?"
-                      className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-3.5 py-2 bg-[#151515] border border-[#262626] rounded-lg text-xs text-[#F5F5F5] focus:outline-none focus:ring-1 focus:ring-[#FF9D00]/40"
                     />
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-medium text-slate-300 mb-1">
+                      <label className="block text-xs font-semibold text-[#A1A1AA] mb-1.5">
                         Widget Position
                       </label>
                       <select
                         value={widgetPosition}
                         onChange={(e) => setWidgetPosition(e.target.value)}
-                        className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="w-full px-3.5 py-2 bg-[#151515] border border-[#262626] rounded-lg text-xs text-[#F5F5F5] focus:outline-none focus:ring-1 focus:ring-[#FF9D00]/40"
                       >
                         <option value="bottom-right">Bottom Right (Default)</option>
                         <option value="bottom-left">Bottom Left</option>
@@ -1380,13 +1295,13 @@ export default function AIEmployeesPage() {
                     </div>
 
                     <div>
-                      <label className="block text-xs font-medium text-slate-300 mb-1">
+                      <label className="block text-xs font-semibold text-[#A1A1AA] mb-1.5">
                         Theme Mode
                       </label>
                       <select
                         value={widgetTheme}
                         onChange={(e) => setWidgetTheme(e.target.value)}
-                        className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="w-full px-3.5 py-2 bg-[#151515] border border-[#262626] rounded-lg text-xs text-[#F5F5F5] focus:outline-none focus:ring-1 focus:ring-[#FF9D00]/40"
                       >
                         <option value="dark">Dark Theme</option>
                         <option value="light">Light Theme</option>
@@ -1395,14 +1310,15 @@ export default function AIEmployeesPage() {
                   </div>
 
                   <div className="pt-2 flex justify-end">
-                    <button
+                    <Button
+                      variant="primary"
+                      size="sm"
                       onClick={handleSaveWidgetConfig}
-                      disabled={isSavingWidgetConfig}
-                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-medium rounded-lg shadow-lg shadow-indigo-500/20 transition-all flex items-center gap-1.5"
+                      loading={isSavingWidgetConfig}
+                      icon={Check}
                     >
-                      <Check className="w-3.5 h-3.5" />
-                      <span>{isSavingWidgetConfig ? 'Saving...' : 'Save Widget Customization'}</span>
-                    </button>
+                      Save Widget Customization
+                    </Button>
                   </div>
                 </div>
               )}
@@ -1410,12 +1326,12 @@ export default function AIEmployeesPage() {
               {/* TAB 3: ALLOWED DOMAINS */}
               {activeEmbedTab === 'domains' && (
                 <div className="space-y-4">
-                  <div className="p-3.5 rounded-xl bg-indigo-950/30 border border-indigo-800/40 text-xs text-indigo-300 leading-relaxed">
-                    <strong>Integration Boundary Notice:</strong> Domain restrictions prevent unauthorized external sites from embedding this AI employee widget. Note that domain validation is an integration control, while ephemeral sessions and rate limiting enforce visitor runtime security.
+                  <div className="p-3.5 rounded-xl bg-[#151515] border border-[#262626] text-xs text-[#A1A1AA] leading-relaxed">
+                    <strong>Integration Boundary Notice:</strong> Domain restrictions ensure unauthorized external sites cannot embed this AI employee widget. Note that domain validation is an integration control, while ephemeral sessions and rate limiting enforce visitor runtime security.
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1">
+                    <label className="block text-xs font-semibold text-[#A1A1AA] mb-1.5">
                       Add Allowed Domain
                     </label>
                     <div className="flex items-center gap-2">
@@ -1433,16 +1349,17 @@ export default function AIEmployeesPage() {
                           }
                         }}
                         placeholder="e.g. yourcompany.com, app.example.com, or localhost:3000"
-                        className="flex-1 px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="flex-1 px-3.5 py-2 bg-[#151515] border border-[#262626] rounded-lg text-xs text-[#F5F5F5] focus:outline-none focus:ring-1 focus:ring-[#FF9D00]/40"
                       />
-                      <button
+                      <Button
                         type="button"
+                        variant="secondary"
+                        size="sm"
                         onClick={handleAddDomain}
-                        className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs text-white font-medium rounded-lg transition-colors flex items-center gap-1"
+                        icon={Plus}
                       >
-                        <Plus className="w-3.5 h-3.5" />
-                        <span>Add</span>
-                      </button>
+                        Add
+                      </Button>
                     </div>
                     {domainError && (
                       <p className="mt-1.5 text-xs text-rose-400">{domainError}</p>
@@ -1451,10 +1368,10 @@ export default function AIEmployeesPage() {
 
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-medium text-slate-300">
+                      <span className="text-xs font-semibold text-[#A1A1AA]">
                         Active Allowed Domains
                       </span>
-                      <span className="text-[11px] text-slate-500 font-mono">
+                      <span className="text-[11px] text-[#737373] font-mono">
                         {allowedDomainsList.length === 0
                           ? 'Open mode (all origins allowed)'
                           : `${allowedDomainsList.length} domain(s) configured`}
@@ -1462,21 +1379,21 @@ export default function AIEmployeesPage() {
                     </div>
 
                     {allowedDomainsList.length === 0 ? (
-                      <div className="p-4 rounded-xl bg-slate-950/60 border border-dashed border-slate-800 text-center text-xs text-slate-400">
-                        No domains specified. The widget will accept requests from any origin (recommended for development & testing).
+                      <div className="p-4 rounded-xl bg-[#0B0B0B] border border-dashed border-[#262626] text-center text-xs text-[#737373]">
+                        No domains specified. The widget will accept requests from any origin (recommended for development &amp; testing).
                       </div>
                     ) : (
                       <div className="space-y-1.5 max-h-48 overflow-y-auto">
                         {allowedDomainsList.map((d) => (
                           <div
                             key={d}
-                            className="flex items-center justify-between p-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-xs"
+                            className="flex items-center justify-between p-2.5 rounded-lg bg-[#151515] border border-[#262626] text-xs"
                           >
-                            <span className="font-mono text-slate-200">{d}</span>
+                            <span className="font-mono text-[#F5F5F5]">{d}</span>
                             <button
                               type="button"
                               onClick={() => handleRemoveDomain(d)}
-                              className="text-slate-400 hover:text-rose-400 transition-colors"
+                              className="text-[#737373] hover:text-rose-400 transition-editorial"
                               title="Remove domain"
                             >
                               <X className="w-4 h-4" />
@@ -1488,14 +1405,15 @@ export default function AIEmployeesPage() {
                   </div>
 
                   <div className="pt-2 flex justify-end">
-                    <button
+                    <Button
+                      variant="primary"
+                      size="sm"
                       onClick={handleSaveWidgetConfig}
-                      disabled={isSavingWidgetConfig}
-                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-medium rounded-lg shadow-lg shadow-indigo-500/20 transition-all flex items-center gap-1.5"
+                      loading={isSavingWidgetConfig}
+                      icon={Check}
                     >
-                      <Check className="w-3.5 h-3.5" />
-                      <span>{isSavingWidgetConfig ? 'Saving...' : 'Save Allowed Domains'}</span>
-                    </button>
+                      Save Allowed Domains
+                    </Button>
                   </div>
                 </div>
               )}
@@ -1505,11 +1423,11 @@ export default function AIEmployeesPage() {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h4 className="text-xs font-semibold text-slate-200">
+                      <h4 className="text-xs font-semibold text-[#F5F5F5]">
                         Interactive Live Widget Preview
                       </h4>
-                      <p className="text-[11px] text-slate-400">
-                        Simulating an external website with the widget script loaded.
+                      <p className="text-[11px] text-[#737373]">
+                        Simulating an external website with the standalone widget script loaded.
                       </p>
                     </div>
                     {embedData?.preview_url && (
@@ -1517,7 +1435,7 @@ export default function AIEmployeesPage() {
                         href={embedData.preview_url}
                         target="_blank"
                         rel="noreferrer"
-                        className="px-3 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
+                        className="px-3 py-1 bg-[#151515] hover:bg-[#1A1A1A] border border-[#262626] rounded text-xs text-[#FF9D00] hover:text-[#FF6A00] flex items-center gap-1 font-semibold transition-editorial"
                       >
                         <span>Full Page Preview</span>
                         <ExternalLink className="w-3 h-3" />
@@ -1525,7 +1443,7 @@ export default function AIEmployeesPage() {
                     )}
                   </div>
 
-                  <div className="w-full h-96 rounded-xl border border-slate-800 bg-slate-950 overflow-hidden relative">
+                  <div className="w-full h-96 rounded-xl border border-[#262626] bg-[#050505] overflow-hidden relative">
                     {embedData?.public_id ? (
                       <iframe
                         src={`/preview/${embedData.public_id}`}
@@ -1533,7 +1451,7 @@ export default function AIEmployeesPage() {
                         title="Widget Preview"
                       />
                     ) : (
-                      <div className="flex items-center justify-center h-full text-xs text-slate-500">
+                      <div className="flex items-center justify-center h-full text-xs text-[#737373]">
                         Generating preview frame...
                       </div>
                     )}

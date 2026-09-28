@@ -3,7 +3,10 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { Membership } from '@/types';
-import { Settings as SettingsIcon, Building, Users, Shield, CheckCircle } from 'lucide-react';
+import { Building, Shield, ShieldCheck, Lock, Server } from 'lucide-react';
+import PageHeader from '@/components/ui/PageHeader';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import Badge from '@/components/ui/Badge';
 
 export default function SettingsPage() {
   const [memberships, setMemberships] = useState<Membership[]>([]);
@@ -24,53 +27,92 @@ export default function SettingsPage() {
   }, []);
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-100">Settings &amp; Workspaces</h1>
-        <p className="text-sm text-slate-400 mt-1">
-          Manage workspace memberships, team roles, and multi-tenant security policies.
-        </p>
-      </div>
+    <div className="max-w-5xl mx-auto space-y-6">
+      <PageHeader
+        title="Settings & Workspaces"
+        description="Manage workspace memberships, team roles, and multi-tenant security policies."
+        badge={<Badge variant="orange">Security & Control Plane</Badge>}
+      />
 
-      <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-6">
-        <h2 className="text-base font-semibold text-white flex items-center gap-2 mb-4">
-          <Building className="w-4 h-4 text-indigo-400" />
-          Authorized Workspaces
-        </h2>
+      {/* Authorized Workspaces */}
+      <Card>
+        <CardHeader>
+          <CardTitle subtitle="Workspaces where your account has verified access">
+            <div className="flex items-center gap-2">
+              <Building className="w-4 h-4 text-[#FF9D00]" />
+              <span>Authorized Workspaces</span>
+            </div>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="py-4 text-xs text-[#737373] font-mono">Loading workspaces...</div>
+          ) : memberships.length === 0 ? (
+            <div className="text-xs text-[#737373]">No workspaces found</div>
+          ) : (
+            <div className="space-y-3">
+              {memberships.map((m) => (
+                <div
+                  key={m.id}
+                  className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-lg bg-[#0B0B0B] border border-[#262626] hover:border-[#333333] transition-colors gap-3"
+                >
+                  <div>
+                    <h3 className="text-sm font-semibold text-[#F5F5F5] font-display">{m.company?.name}</h3>
+                    <p className="text-xs text-[#737373] font-mono mt-0.5">Workspace Slug: {m.company?.slug}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="orange">Role: {m.role}</Badge>
+                    <Badge variant="neutral">ID: {m.company?.id.slice(0, 8)}...</Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-        {loading ? (
-          <div className="py-4 text-sm text-slate-500">Loading workspaces...</div>
-        ) : (
-          <div className="space-y-3">
-            {memberships.map((m) => (
-              <div
-                key={m.id}
-                className="flex items-center justify-between p-4 rounded-lg bg-slate-800/40 border border-slate-700/60"
-              >
-                <div>
-                  <h3 className="text-sm font-semibold text-white">{m.company?.name}</h3>
-                  <p className="text-xs text-slate-400">Slug: {m.company?.slug}</p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-xs px-2.5 py-1 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-mono font-medium">
-                    Role: {m.role}
-                  </span>
-                </div>
+      {/* Security & Tenant Isolation Boundary */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <Card>
+          <CardHeader>
+            <CardTitle subtitle="Multi-tenant zero-trust guarantees">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-[#FF9D00]" />
+                <span>Tenant Isolation Boundary</span>
               </div>
-            ))}
-          </div>
-        )}
-      </div>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-xs text-[#A1A1AA] space-y-3 leading-relaxed">
+            <p>
+              Cross-company data access is strictly rejected at the backend database query layer.
+              Every request is authenticated via JWT and validated against authorized <code className="text-[#FF9D00] font-mono bg-[#151515] px-1 py-0.5 rounded border border-[#262626]">Membership</code> records.
+            </p>
+            <div className="flex items-center gap-2 text-[#FF9D00] font-mono text-[11px] bg-[#151515] p-2.5 rounded-lg border border-[#262626]">
+              <Lock className="w-4 h-4 shrink-0 text-[#FF9D00]" />
+              <span>tenant_id strictly checked in Qdrant & PostgreSQL</span>
+            </div>
+          </CardContent>
+        </Card>
 
-      <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-6">
-        <h2 className="text-base font-semibold text-white flex items-center gap-2 mb-2">
-          <Shield className="w-4 h-4 text-emerald-400" />
-          Tenant Isolation Boundary
-        </h2>
-        <p className="text-xs text-slate-400 leading-relaxed">
-          Cross-company data access is strictly rejected at the backend database query layer.
-          Every request is authenticated via JWT and validated against authorized <code className="text-indigo-300">Membership</code> records.
-        </p>
+        <Card>
+          <CardHeader>
+            <CardTitle subtitle="Production infrastructure specifications">
+              <div className="flex items-center gap-2">
+                <Server className="w-4 h-4 text-[#FFC247]" />
+                <span>Runtime Infrastructure</span>
+              </div>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-xs text-[#A1A1AA] space-y-3 leading-relaxed">
+            <p>
+              Avtaar services run on FastAPI with asynchronous job queues, Redis-backed sliding-window distributed rate limiting, and OpenTelemetry instrumentation.
+            </p>
+            <div className="flex items-center gap-2 text-[#FFC247] font-mono text-[11px] bg-[#151515] p-2.5 rounded-lg border border-[#262626]">
+              <Shield className="w-4 h-4 shrink-0 text-[#FFC247]" />
+              <span>Automatic PII Redaction for Traces & Audits</span>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

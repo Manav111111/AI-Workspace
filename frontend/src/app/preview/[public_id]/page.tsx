@@ -3,9 +3,10 @@
 import React, { useEffect, useState } from 'react';
 import Script from 'next/script';
 import Link from 'next/link';
-import { Bot, Sparkles, ArrowLeft, ShieldCheck, Layers, ExternalLink } from 'lucide-react';
+import { Bot, Sparkles, ArrowLeft, ShieldCheck, Layers } from 'lucide-react';
 import { api } from '@/lib/api';
 import { PublicEmployeeConfig } from '@/types';
+import { Card, CardContent } from '@/components/ui/Card';
 
 export default function StandaloneWidgetPreviewPage({
   params,
@@ -33,30 +34,30 @@ export default function StandaloneWidgetPreviewPage({
   }, [publicId]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-100 flex flex-col font-sans">
+    <div className="min-h-screen bg-[#050505] text-[#F5F5F5] flex flex-col font-sans selection:bg-[#FF9D00]/20 selection:text-[#FF9D00]">
       {/* Top Demo Nav */}
-      <header className="border-b border-slate-800 bg-slate-900/60 backdrop-blur-md sticky top-0 z-40 px-6 py-4 flex items-center justify-between">
+      <header className="border-b border-[#262626] bg-[#0B0B0B]/80 backdrop-blur-md sticky top-0 z-40 px-6 py-3.5 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Link
             href="/ai-employees"
-            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors flex items-center gap-1 text-xs"
+            className="p-1.5 rounded-lg bg-[#151515] hover:bg-[#1E1E1E] text-[#A1A1AA] hover:text-[#F5F5F5] transition-colors flex items-center gap-1.5 text-xs font-semibold"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Dashboard</span>
           </Link>
-          <div className="h-4 w-px bg-slate-800" />
+          <div className="h-4 w-px bg-[#262626]" />
           <div className="flex items-center gap-2 text-xs">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-slate-400 font-mono">External Host Website Simulation</span>
+            <span className="w-2 h-2 rounded-full bg-[#FF9D00] animate-pulse" />
+            <span className="text-[#737373] font-mono">External Host Website Sandbox</span>
           </div>
         </div>
 
         {config && (
-          <div className="text-xs text-slate-400 flex items-center gap-2">
+          <div className="text-xs text-[#737373] flex items-center gap-2">
             <span>Widget Target:</span>
-            <strong className="text-indigo-400 font-medium">{config.name}</strong>
-            <span className="text-slate-600">•</span>
-            <span className="font-mono text-[11px] text-slate-500">{publicId}</span>
+            <strong className="text-[#FF9D00] font-semibold">{config.name}</strong>
+            <span className="text-[#262626]">•</span>
+            <span className="font-mono text-[11px] text-[#A1A1AA]">{publicId}</span>
           </div>
         )}
       </header>
@@ -65,18 +66,18 @@ export default function StandaloneWidgetPreviewPage({
       <main className="flex-1 max-w-4xl mx-auto w-full p-6 sm:p-12 flex flex-col items-center justify-center text-center space-y-6">
         {loading ? (
           <div className="space-y-4 animate-pulse max-w-md w-full">
-            <div className="h-8 bg-slate-800 rounded w-3/4 mx-auto" />
-            <div className="h-4 bg-slate-800 rounded w-full" />
-            <div className="h-4 bg-slate-800 rounded w-5/6 mx-auto" />
+            <div className="h-8 bg-[#151515] rounded w-3/4 mx-auto" />
+            <div className="h-4 bg-[#151515] rounded w-full" />
+            <div className="h-4 bg-[#151515] rounded w-5/6 mx-auto" />
           </div>
         ) : error ? (
-          <div className="p-6 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 max-w-lg space-y-3">
-            <h3 className="text-base font-semibold">Widget Unavailable</h3>
-            <p className="text-xs text-slate-300">{error}</p>
+          <div className="p-6 rounded-xl bg-rose-950/40 border border-rose-900/60 text-rose-300 max-w-lg space-y-3">
+            <h3 className="text-base font-semibold font-display">Widget Unavailable</h3>
+            <p className="text-xs text-[#A1A1AA]">{error}</p>
             <div className="pt-2">
               <Link
                 href="/ai-employees"
-                className="inline-flex px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-medium"
+                className="inline-flex px-4 py-2 bg-[#151515] hover:bg-[#1E1E1E] border border-[#262626] text-[#F5F5F5] rounded-lg text-xs font-semibold transition-colors"
               >
                 Return to AI Employees
               </Link>
@@ -84,48 +85,56 @@ export default function StandaloneWidgetPreviewPage({
           </div>
         ) : (
           <>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-medium">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Avtaar Standalone Embed Widget Demo</span>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#151515] border border-[#262626] text-[#FF9D00] text-xs font-medium">
+              <Sparkles className="w-3.5 h-3.5 text-[#FF9D00]" />
+              <span>Avtaar Standalone Embed Widget Sandbox</span>
             </div>
 
-            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white max-w-2xl">
-              Welcome to Acme Corp Customer Portal
+            <h1 className="text-3xl sm:text-4xl font-bold font-display tracking-tight text-[#F5F5F5] max-w-2xl leading-tight">
+              Customer Portal Simulation
             </h1>
 
-            <p className="text-sm sm:text-base text-slate-400 max-w-xl leading-relaxed">
+            <p className="text-sm sm:text-base text-[#A1A1AA] max-w-xl leading-relaxed">
               This sandbox webpage demonstrates the real-world deployment of your AI Employee{' '}
-              <strong className="text-indigo-400 font-semibold">{config?.name}</strong> using the
-              standalone <code className="text-slate-200 bg-slate-800 px-1.5 py-0.5 rounded text-xs">widget.js</code> tag.
+              <strong className="text-[#FF9D00] font-semibold">{config?.name}</strong> using the
+              standalone <code className="text-[#F5F5F5] bg-[#151515] border border-[#262626] px-1.5 py-0.5 rounded text-xs font-mono">widget.js</code> script.
             </p>
 
             {/* Simulated website features */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full pt-8 text-left">
-              <div className="p-4 rounded-xl bg-slate-900/50 border border-slate-800 space-y-2">
-                <ShieldCheck className="w-5 h-5 text-emerald-400" />
-                <h4 className="text-xs font-semibold text-slate-200">Shadow DOM Isolation</h4>
-                <p className="text-[11px] text-slate-400">
-                  Styles from this host page do not interfere with the floating widget.
-                </p>
-              </div>
-              <div className="p-4 rounded-xl bg-slate-900/50 border border-slate-800 space-y-2">
-                <Layers className="w-5 h-5 text-indigo-400" />
-                <h4 className="text-xs font-semibold text-slate-200">Grounded RAG</h4>
-                <p className="text-[11px] text-slate-400">
-                  Click the launcher in the corner to test retrieval and tool executions in real time.
-                </p>
-              </div>
-              <div className="p-4 rounded-xl bg-slate-900/50 border border-slate-800 space-y-2">
-                <Bot className="w-5 h-5 text-purple-400" />
-                <h4 className="text-xs font-semibold text-slate-200">Session Resumption</h4>
-                <p className="text-[11px] text-slate-400">
-                  Refreshing the page restores previous message history via anonymous visitor session.
-                </p>
-              </div>
+              <Card>
+                <CardContent className="p-4 space-y-2">
+                  <ShieldCheck className="w-5 h-5 text-[#FF9D00]" />
+                  <h4 className="text-xs font-semibold font-display text-[#F5F5F5]">Shadow DOM Isolation</h4>
+                  <p className="text-[11px] text-[#A1A1AA] leading-relaxed">
+                    Styles from this host page do not bleed into or interfere with the floating widget.
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-4 space-y-2">
+                  <Layers className="w-5 h-5 text-[#FFC247]" />
+                  <h4 className="text-xs font-semibold font-display text-[#F5F5F5]">Grounded RAG</h4>
+                  <p className="text-[11px] text-[#A1A1AA] leading-relaxed">
+                    Click the launcher in the corner to test retrieval citations and tool executions in real time.
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-4 space-y-2">
+                  <Bot className="w-5 h-5 text-[#FF9D00]" />
+                  <h4 className="text-xs font-semibold font-display text-[#F5F5F5]">Session Resumption</h4>
+                  <p className="text-[11px] text-[#A1A1AA] leading-relaxed">
+                    Refreshing the page restores previous message history via anonymous visitor session.
+                  </p>
+                </CardContent>
+              </Card>
             </div>
 
-            <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 max-w-md text-xs text-slate-400 mt-4">
-              👉 Look at the <strong>bottom-right (or configured position)</strong> of the screen to click the floating launcher and start a chat session.
+            <div className="p-4 rounded-xl bg-[#101010] border border-[#262626] max-w-md text-xs text-[#A1A1AA] mt-4">
+              Look at the <strong className="text-[#FF9D00]">bottom-right</strong> of the screen to click the floating launcher and start a chat session.
             </div>
           </>
         )}

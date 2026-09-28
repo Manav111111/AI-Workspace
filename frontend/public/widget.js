@@ -143,22 +143,23 @@
       width: 60px;
       height: 60px;
       border-radius: 50%;
-      background: var(--brand-color, #4f46e5);
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.2);
-      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: #101010;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 0 15px rgba(255, 157, 0, 0.25);
+      border: 1.5px solid rgba(255, 157, 0, 0.5);
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      color: #ffffff;
+      color: #FF9D00;
       outline: none;
-      transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+      transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease, border-color 0.2s ease;
       position: relative;
     }
 
     .launcher-btn:hover {
       transform: scale(1.06);
-      box-shadow: 0 14px 28px -4px rgba(79, 70, 229, 0.45);
+      box-shadow: 0 14px 28px -4px rgba(255, 157, 0, 0.4);
+      border-color: #FF9D00;
     }
 
     .launcher-btn:active {
@@ -748,14 +749,13 @@
   widgetWrap.className = 'widget-wrap pos-bottom-right';
 
   // Floating Launcher Button
+  var avtaarIconHtml = `<img src="${apiBase.replace('/api/v1', '')}/brand/avtaar-icon.png" alt="Avtaar" style="width: 32px; height: 32px; object-fit: contain;" onerror="this.onerror=null; this.parentElement.innerHTML='<svg viewBox=\\'0 0 24 24\\' width=\\'28\\' height=\\'28\\' fill=\\'none\\' stroke=\\'#FF9D00\\' stroke-width=\\'2\\'><path d=\\'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z\\'></path></svg>'">`;
+  var closeIconHtml = `<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#FF9D00" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
+
   var launcherBtn = document.createElement('button');
   launcherBtn.className = 'launcher-btn';
   launcherBtn.setAttribute('aria-label', 'Open AI Employee Chat');
-  launcherBtn.innerHTML = `
-    <svg viewBox="0 0 24 24">
-      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-    </svg>
-  `;
+  launcherBtn.innerHTML = avtaarIconHtml;
 
   // Chat Window
   var chatWindow = document.createElement('div');
@@ -1202,23 +1202,14 @@
     state.isOpen = !state.isOpen;
     if (state.isOpen) {
       chatWindow.classList.add('open');
-      launcherBtn.innerHTML = `
-        <svg viewBox="0 0 24 24">
-          <line x1="18" y1="6" x2="6" y2="18"></line>
-          <line x1="6" y1="6" x2="18" y2="18"></line>
-        </svg>
-      `;
+      launcherBtn.innerHTML = closeIconHtml;
       ensureSession();
       setTimeout(function () {
         inputElement.focus();
       }, 100);
     } else {
       chatWindow.classList.remove('open');
-      launcherBtn.innerHTML = `
-        <svg viewBox="0 0 24 24">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-        </svg>
-      `;
+      launcherBtn.innerHTML = avtaarIconHtml;
       if (avatarEngine && typeof avatarEngine.pause === 'function') {
         avatarEngine.pause();
       }
@@ -1228,11 +1219,7 @@
   closeBtn.onclick = function () {
     state.isOpen = false;
     chatWindow.classList.remove('open');
-    launcherBtn.innerHTML = `
-      <svg viewBox="0 0 24 24">
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-      </svg>
-    `;
+    launcherBtn.innerHTML = avtaarIconHtml;
     if (avatarEngine && typeof avatarEngine.pause === 'function') {
       avatarEngine.pause();
     }

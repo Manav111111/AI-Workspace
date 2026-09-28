@@ -101,6 +101,8 @@ export interface DocumentItem {
   mime_type: string;
   file_size: number;
   status: DocumentStatus;
+  chunk_count?: number;
+  total_chunks?: number;
   error_message?: string | null;
   document_metadata: Record<string, any>;
   created_at: string;
@@ -115,6 +117,8 @@ export interface DocumentChunkItem {
   chunk_index: number;
   content: string;
   token_count: number;
+  page_number?: number | null;
+  header_path?: string | null;
   chunk_metadata: Record<string, any>;
   created_at: string;
   updated_at: string;
@@ -333,6 +337,22 @@ export interface EvaluationRun {
   metrics_summary: Record<string, any>;
   duration_seconds?: number | null;
   error_message?: string | null;
+  regression_passed?: boolean | null;
+  recall_at_1?: number | null;
+  recall_at_3?: number | null;
+  recall_at_5?: number | null;
+  precision_at_1?: number | null;
+  precision_at_3?: number | null;
+  precision_at_5?: number | null;
+  mrr?: number | null;
+  ndcg_at_5?: number | null;
+  faithfulness?: number | null;
+  answer_relevance?: number | null;
+  answer_relevance_score?: number | null;
+  refusal_correctness?: number | null;
+  refusal_accuracy?: number | null;
+  avg_latency_ms?: number | null;
+  ai_employee?: AIEmployee;
   created_at: string;
   completed_at?: string | null;
   items?: EvaluationResultItem[];
@@ -423,6 +443,14 @@ export interface BudgetStatus {
   exceeded: boolean;
 }
 
+export interface UsageModelBreakdown {
+  model: string;
+  tokens: number;
+  cost: number;
+  estimated_cost?: number;
+  requests?: number;
+}
+
 export interface UsageSummary {
   time_window_days: number;
   requests_count: number;
@@ -432,7 +460,7 @@ export interface UsageSummary {
   cached_tokens: number;
   total_estimated_cost: number;
   currency: string;
-  by_model: Array<{ model: string; tokens: number; estimated_cost: number }>;
+  by_model: UsageModelBreakdown[];
   by_source: Array<{ source: string; tokens: number; requests: number }>;
   budgets: BudgetStatus[];
 }

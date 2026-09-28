@@ -4,36 +4,24 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { api } from '@/lib/api';
 import {
   AIEmployee,
-  BudgetStatus,
   UsageBudget,
   UsageLedgerEntry,
   UsageSummary,
 } from '@/types';
 import {
-  AlertTriangle,
-  ArrowRight,
   BarChart3,
-  Check,
-  CheckCircle2,
-  ChevronRight,
-  Clock,
-  Coins,
-  Cpu,
-  CreditCard,
   DollarSign,
-  Filter,
-  Layers,
-  PieChart,
   Plus,
   RefreshCw,
-  Search,
-  ShieldAlert,
   ShieldCheck,
   Trash2,
-  TrendingUp,
   X,
   Zap,
 } from 'lucide-react';
+import PageHeader from '@/components/ui/PageHeader';
+import Button from '@/components/ui/Button';
+import Badge from '@/components/ui/Badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 
 export default function UsagePage() {
   const [summary, setSummary] = useState<UsageSummary | null>(null);
@@ -159,549 +147,432 @@ export default function UsagePage() {
   }, [ledger, selectedEmployeeId]);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 p-6 space-y-6">
+    <div className="max-w-7xl mx-auto space-y-6">
       {/* Top Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800/80 pb-6">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <Coins className="w-6 h-6 text-emerald-400" />
-            <h1 className="text-2xl font-bold tracking-tight text-white">
-              Cost Metering & Usage Governance
-            </h1>
-            <span className="px-2.5 py-0.5 text-xs font-semibold rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-              Decimal-Safe Ledger
-            </span>
+      <PageHeader
+        title="Cost Metering & Budget Governance"
+        description="Real-time multi-tenant token consumption, exact pricing breakdown from model registry, and hard budget governance enforcement."
+        badge={<Badge variant="orange">Decimal-Safe Ledger</Badge>}
+        actions={
+          <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={RefreshCw}
+              loading={refreshing}
+              onClick={() => refreshData()}
+            >
+              Refresh
+            </Button>
+            <Button
+              variant="orange"
+              size="sm"
+              icon={Plus}
+              onClick={() => setIsBudgetModalOpen(true)}
+            >
+              New Spend Budget
+            </Button>
           </div>
-          <p className="text-sm text-slate-400">
-            Real-time multi-tenant token consumption, exact pricing breakdown, and hard budget enforcement.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => refreshData()}
-            disabled={refreshing}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-slate-900 border border-slate-700/80 hover:bg-slate-800 text-slate-200 text-sm font-medium transition shadow-sm disabled:opacity-50"
-          >
-            <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin text-emerald-400' : ''}`} />
-            Refresh
-          </button>
-          <button
-            onClick={() => setIsBudgetModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium transition shadow-md shadow-emerald-950"
-          >
-            <Plus className="w-4 h-4" />
-            New Spend Budget
-          </button>
-        </div>
-      </div>
+        }
+      />
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Total Cost */}
-        <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 backdrop-blur-sm shadow-md">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium text-slate-400">
-              Estimated Spend ({timeWindowDays}d)
-            </span>
-            <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-              <DollarSign className="w-4 h-4" />
+        <Card hover>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-mono text-[#737373]">
+                Estimated Spend ({timeWindowDays}d)
+              </span>
+              <div className="p-1.5 rounded-lg bg-[#151515] border border-[#262626] text-[#FF9D00]">
+                <DollarSign className="w-4 h-4" />
+              </div>
             </div>
-          </div>
-          <div className="text-2xl font-bold text-white mb-1 font-mono">
-            ${summary?.total_estimated_cost.toFixed(4) ?? '0.0000'}
-            <span className="text-xs text-slate-400 font-sans font-normal ml-1.5">USD</span>
-          </div>
-          <div className="text-xs text-slate-400 flex items-center gap-1">
-            <span>Avg / Turn:</span>
-            <span className="text-slate-200 font-mono font-medium">
-              $
-              {summary && summary.requests_count > 0
-                ? (summary.total_estimated_cost / summary.requests_count).toFixed(5)
-                : '0.00000'}
-            </span>
-          </div>
-        </div>
+            <div className="text-2xl font-bold text-[#F5F5F5] font-mono mb-1">
+              ${summary?.total_estimated_cost.toFixed(4) ?? '0.0000'}
+              <span className="text-xs text-[#737373] font-normal ml-1.5 font-sans">USD</span>
+            </div>
+            <div className="text-xs text-[#737373] flex items-center gap-1 font-mono">
+              <span>Avg/Turn:</span>
+              <span className="text-[#A1A1AA] font-semibold">
+                $
+                {summary && summary.requests_count > 0
+                  ? (summary.total_estimated_cost / summary.requests_count).toFixed(5)
+                  : '0.00000'}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Total Tokens */}
-        <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 backdrop-blur-sm shadow-md">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium text-slate-400">Total Tokens</span>
-            <div className="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-              <Zap className="w-4 h-4" />
+        <Card hover>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-mono text-[#737373]">Total Tokens</span>
+              <div className="p-1.5 rounded-lg bg-[#151515] border border-[#262626] text-[#A1A1AA]">
+                <Zap className="w-4 h-4" />
+              </div>
             </div>
-          </div>
-          <div className="text-2xl font-bold text-white mb-1 font-mono">
-            {summary?.total_tokens.toLocaleString() ?? '0'}
-          </div>
-          <div className="text-xs text-slate-400 flex items-center justify-between">
-            <span>In: {summary?.input_tokens.toLocaleString() ?? 0}</span>
-            <span className="text-slate-600">•</span>
-            <span>Out: {summary?.output_tokens.toLocaleString() ?? 0}</span>
-          </div>
-        </div>
+            <div className="text-2xl font-bold text-[#F5F5F5] font-mono mb-1">
+              {summary?.total_tokens.toLocaleString() ?? '0'}
+            </div>
+            <div className="text-xs text-[#737373] font-mono">
+              In: {summary?.input_tokens.toLocaleString() ?? '0'} &bull; Out: {summary?.output_tokens.toLocaleString() ?? '0'}
+            </div>
+          </CardContent>
+        </Card>
 
-        {/* Total Turn Requests */}
-        <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 backdrop-blur-sm shadow-md">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium text-slate-400">Turn Invocations</span>
-            <div className="p-1.5 rounded-lg bg-purple-500/10 text-purple-400 border border-purple-500/20">
-              <BarChart3 className="w-4 h-4" />
+        {/* Total Invocations */}
+        <Card hover>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-mono text-[#737373]">Metered Calls</span>
+              <div className="p-1.5 rounded-lg bg-[#151515] border border-[#262626] text-[#FFC247]">
+                <BarChart3 className="w-4 h-4" />
+              </div>
             </div>
-          </div>
-          <div className="text-2xl font-bold text-white mb-1 font-mono">
-            {summary?.requests_count.toLocaleString() ?? '0'}
-          </div>
-          <div className="text-xs text-slate-400">
-            Across conversation, playground & eval turns
-          </div>
-        </div>
+            <div className="text-2xl font-bold text-[#F5F5F5] font-mono mb-1">
+              {summary?.requests_count ?? 0}
+            </div>
+            <div className="text-xs text-emerald-400 font-medium">
+              100% Accounted in Ledger
+            </div>
+          </CardContent>
+        </Card>
 
-        {/* Active Budgets Count */}
-        <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 backdrop-blur-sm shadow-md">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium text-slate-400">Governance Policies</span>
-            <div className="p-1.5 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-              <ShieldCheck className="w-4 h-4" />
+        {/* Budget Policies Active */}
+        <Card hover>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-mono text-[#737373]">Budget Policies</span>
+              <div className="p-1.5 rounded-lg bg-[#151515] border border-[#262626] text-amber-400">
+                <ShieldCheck className="w-4 h-4" />
+              </div>
             </div>
-          </div>
-          <div className="text-2xl font-bold text-white mb-1">
-            {budgets.length}
-            <span className="text-xs text-slate-400 font-normal ml-1.5">active policies</span>
-          </div>
-          <div className="text-xs text-slate-400">
-            {budgets.filter((b) => b.hard_limit_enabled).length} hard enforcement active
-          </div>
-        </div>
+            <div className="text-2xl font-bold text-[#FFC247] font-mono mb-1">
+              {budgets.length}
+            </div>
+            <div className="text-xs text-[#737373]">
+              {budgets.filter((b) => b.hard_limit_enabled).length} hard limit policies active
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Spend Budget Policies & Progress Section */}
-      <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-5 shadow-lg space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-          <div className="flex items-center gap-2">
-            <CreditCard className="w-4 h-4 text-emerald-400" />
-            <h2 className="text-sm font-semibold text-white">Spend Budget Guardrails</h2>
-          </div>
-          <span className="text-xs text-slate-400">Pre-Invocation Balance Checks</span>
-        </div>
-
-        {summary?.budgets && summary.budgets.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {summary.budgets.map((b) => {
-              const isExceeded = b.exceeded || b.utilization_percent >= 100;
-              const isSoftWarn = b.utilization_percent >= b.soft_limit_percent;
-
-              return (
-                <div
-                  key={b.id}
-                  className={`p-4 rounded-xl border transition shadow-sm ${
-                    isExceeded
-                      ? 'bg-rose-950/20 border-rose-800/60'
-                      : isSoftWarn
-                      ? 'bg-amber-950/20 border-amber-800/60'
-                      : 'bg-slate-950/60 border-slate-800'
-                  }`}
-                >
-                  <div className="flex items-start justify-between mb-2">
-                    <div>
-                      <h3 className="text-sm font-bold text-white">{b.name}</h3>
-                      <p className="text-[11px] text-slate-400">
-                        {getEmployeeName(b.ai_employee_id)} • {b.period}
-                      </p>
+      {/* Model Breakdown & Active Budgets Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Model Breakdown Card */}
+        <Card className="lg:col-span-1">
+          <CardHeader>
+            <CardTitle subtitle="Model price registry token spend distribution">
+              <span>Spend by Model</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {!summary?.by_model || (Array.isArray(summary.by_model) && summary.by_model.length === 0) ? (
+              <div className="text-center py-6 text-xs text-[#737373] font-mono">
+                No model usage recorded yet.
+              </div>
+            ) : (
+              (Array.isArray(summary.by_model)
+                ? summary.by_model
+                : Object.entries(summary.by_model).map(([model, data]: [string, any]) => ({ model, ...data }))
+              ).map((mData: any) => {
+                const modelName = mData.model;
+                const cost = mData.cost ?? mData.estimated_cost ?? 0;
+                const tokens = mData.tokens ?? 0;
+                const pct = summary.total_estimated_cost > 0
+                  ? (cost / summary.total_estimated_cost) * 100
+                  : 0;
+                return (
+                  <div key={modelName} className="space-y-1.5 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono text-[#F5F5F5] font-medium">{modelName}</span>
+                      <span className="font-mono text-[#FF9D00] font-bold">${Number(cost).toFixed(4)}</span>
                     </div>
-                    <button
-                      onClick={() => handleDeleteBudget(b.id)}
-                      className="p-1 text-slate-500 hover:text-rose-400 transition"
-                      title="Delete Policy"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    <div className="w-full bg-[#151515] h-1.5 rounded-full overflow-hidden">
+                      <div
+                        className="bg-[#FF9D00] h-full rounded-full"
+                        style={{ width: `${Math.max(6, pct)}%` }}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between text-[10px] text-[#737373] font-mono">
+                      <span>{Number(tokens).toLocaleString()} tokens</span>
+                      <span>{pct.toFixed(1)}% of total</span>
+                    </div>
                   </div>
+                );
+              })
+            )}
+          </CardContent>
+        </Card>
 
-                  {/* Spend vs Limit */}
-                  <div className="flex items-baseline justify-between mt-3 mb-1 text-xs">
-                    <span className="text-slate-400">
-                      Spent: <strong className="font-mono text-white">${b.current_spend.toFixed(4)}</strong>
-                    </span>
-                    <span className="text-slate-400">
-                      Limit: <strong className="font-mono text-slate-200">${b.limit_amount.toFixed(2)}</strong>
-                    </span>
-                  </div>
+        {/* Spend Budget Policies List */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle subtitle="Real-time spend caps with soft alerts and hard request rejection">
+              <span>Active Budget Governance Policies ({budgets.length})</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {budgets.length === 0 ? (
+              <div className="text-center py-8 text-xs text-[#737373] border border-dashed border-[#262626] rounded-lg">
+                No budget policies created. Set spend limits to protect against unexpected token spikes.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                {budgets.map((b: any) => {
+                  const currentSpend = b.current_spend ?? 0;
+                  const percentUsed = b.limit_amount > 0 ? (currentSpend / b.limit_amount) * 100 : 0;
+                  const isWarning = percentUsed >= (b.soft_limit_percent || 80);
+                  const isExceeded = percentUsed >= 100;
 
-                  {/* Visual Progress Bar */}
-                  <div className="relative w-full h-2.5 bg-slate-900 rounded-full overflow-hidden mb-2">
+                  return (
                     <div
-                      className={`h-full rounded-full transition-all duration-500 ${
-                        isExceeded
-                          ? 'bg-rose-500'
-                          : isSoftWarn
-                          ? 'bg-amber-500'
-                          : 'bg-emerald-500'
-                      }`}
-                      style={{ width: `${Math.min(100, b.utilization_percent)}%` }}
-                    />
-                    {/* Soft limit marker line */}
-                    <div
-                      className="absolute top-0 bottom-0 w-0.5 bg-white/40"
-                      style={{ left: `${b.soft_limit_percent}%` }}
-                      title={`Soft warning threshold at ${b.soft_limit_percent}%`}
-                    />
-                  </div>
+                      key={b.id}
+                      className="p-3.5 rounded-lg bg-[#0B0B0B] border border-[#262626] space-y-2.5 flex flex-col justify-between"
+                    >
+                      <div>
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <h4 className="text-xs font-semibold text-[#F5F5F5]">{b.budget_name}</h4>
+                            <p className="text-[11px] text-[#737373] font-mono mt-0.5">
+                              {getEmployeeName(b.ai_employee_id)}
+                            </p>
+                          </div>
+                          <Badge
+                            variant={isExceeded ? 'rose' : isWarning ? 'amber' : 'forest'}
+                            dot
+                          >
+                            {isExceeded ? 'EXCEEDED' : isWarning ? 'WARNING' : 'HEALTHY'}
+                          </Badge>
+                        </div>
 
-                  {/* Status Badges */}
-                  <div className="flex items-center justify-between text-[11px]">
-                    <span
-                      className={`font-semibold ${
-                        isExceeded
-                          ? 'text-rose-400'
-                          : isSoftWarn
-                          ? 'text-amber-400'
-                          : 'text-emerald-400'
-                      }`}
-                    >
-                      {b.utilization_percent}% utilized
-                    </span>
-                    <span
-                      className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
-                        b.hard_limit_enabled
-                          ? 'bg-rose-500/10 text-rose-300 border border-rose-500/20'
-                          : 'bg-slate-800 text-slate-400'
-                      }`}
-                    >
-                      {b.hard_limit_enabled ? 'Hard Enforcement' : 'Soft Alert Only'}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="p-6 text-center text-slate-400 border border-dashed border-slate-800 rounded-lg">
-            <ShieldAlert className="w-8 h-8 text-slate-600 mx-auto mb-2" />
-            <p className="text-xs text-slate-300 font-medium">No Spend Budgets Configured</p>
-            <p className="text-[11px] text-slate-500 mt-0.5">
-              Protect against rogue agent loops or unexpected token surges by creating a budget policy.
-            </p>
-          </div>
-        )}
+                        <div className="mt-3 text-sm font-bold font-mono text-[#F5F5F5]">
+                          ${Number(currentSpend).toFixed(2)}{' '}
+                          <span className="text-xs text-[#737373] font-normal">/ ${Number(b.limit_amount).toFixed(2)}</span>
+                        </div>
+
+                        <div className="w-full bg-[#151515] h-1.5 rounded-full overflow-hidden mt-1.5">
+                          <div
+                            className={`h-full rounded-full ${
+                              isExceeded ? 'bg-rose-500' : isWarning ? 'bg-amber-500' : 'bg-[#FF9D00]'
+                            }`}
+                            style={{ width: `${Math.min(100, percentUsed)}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-2 border-t border-[#262626] text-[10px] text-[#737373] font-mono">
+                        <span>Period: {b.period_type}</span>
+                        <button
+                          onClick={() => handleDeleteBudget(b.id)}
+                          className="text-[#737373] hover:text-rose-400 transition-colors p-1"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Model & Source Breakdown Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Model Breakdown */}
-        <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800">
-          <div className="flex items-center gap-2 mb-3 text-xs font-semibold text-slate-200">
-            <Cpu className="w-4 h-4 text-purple-400" />
-            <span>Spend by LLM Model</span>
-          </div>
-          {summary?.by_model && summary.by_model.length > 0 ? (
-            <div className="space-y-2">
-              {summary.by_model.map((m) => (
-                <div
-                  key={m.model}
-                  className="flex items-center justify-between p-2.5 rounded-lg bg-slate-950/60 border border-slate-800/80 text-xs"
-                >
-                  <div>
-                    <span className="font-mono text-purple-400 font-medium">{m.model}</span>
-                    <span className="text-[11px] text-slate-500 block">
-                      {m.tokens.toLocaleString()} tokens
-                    </span>
-                  </div>
-                  <div className="text-right">
-                    <span className="font-mono font-semibold text-white">
-                      ${m.estimated_cost.toFixed(4)}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="p-4 text-center text-slate-500 text-xs">No model usage recorded.</div>
-          )}
-        </div>
+      {/* Usage Ledger Table */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between w-full">
+            <CardTitle subtitle="Immutable, decimal-safe per-request transaction accounting">
+              <span>Usage Transaction Ledger</span>
+            </CardTitle>
 
-        {/* Source Breakdown */}
-        <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800">
-          <div className="flex items-center gap-2 mb-3 text-xs font-semibold text-slate-200">
-            <Layers className="w-4 h-4 text-cyan-400" />
-            <span>Usage by Execution Source</span>
-          </div>
-          {summary?.by_source && summary.by_source.length > 0 ? (
-            <div className="space-y-2">
-              {summary.by_source.map((s) => (
-                <div
-                  key={s.source}
-                  className="flex items-center justify-between p-2.5 rounded-lg bg-slate-950/60 border border-slate-800/80 text-xs"
-                >
-                  <div>
-                    <span className="font-mono text-cyan-400 font-medium">{s.source}</span>
-                    <span className="text-[11px] text-slate-500 block">
-                      {s.requests} invocations
-                    </span>
-                  </div>
-                  <div className="text-right">
-                    <span className="font-mono font-semibold text-slate-300">
-                      {s.tokens.toLocaleString()} tokens
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="p-4 text-center text-slate-500 text-xs">No source usage recorded.</div>
-          )}
-        </div>
-      </div>
-
-      {/* Filter and Ledger Table Section */}
-      <div className="bg-slate-900/60 border border-slate-800 rounded-xl overflow-hidden shadow-lg space-y-0">
-        <div className="px-5 py-4 border-b border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <Coins className="w-4 h-4 text-emerald-400" />
-            <h2 className="text-sm font-semibold text-white">Authoritative Usage Ledger</h2>
-            <span className="text-xs text-slate-500">({filteredLedger.length} entries)</span>
-          </div>
-
-          <div className="flex items-center gap-3">
             <select
               value={selectedEmployeeId}
-              onChange={(e) => {
-                setSelectedEmployeeId(e.target.value);
-                refreshData(e.target.value);
-              }}
-              className="bg-slate-950 border border-slate-800 text-slate-200 text-xs rounded-lg px-3 py-1.5 focus:outline-none focus:border-emerald-500"
+              onChange={(e) => setSelectedEmployeeId(e.target.value)}
+              className="bg-[#0B0B0B] border border-[#262626] rounded-lg px-3 py-1.5 text-xs text-[#F5F5F5] focus:outline-none focus:border-[#FF9D00]"
             >
               <option value="ALL">All AI Employees</option>
-              {employees.map((emp) => (
-                <option key={emp.id} value={emp.id}>
-                  {emp.name}
+              {employees.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.name}
                 </option>
               ))}
             </select>
           </div>
-        </div>
+        </CardHeader>
 
-        {loading ? (
-          <div className="py-16 text-center text-slate-400 flex flex-col items-center justify-center gap-2">
-            <RefreshCw className="w-6 h-6 animate-spin text-emerald-400" />
-            <p className="text-sm">Loading usage ledger records...</p>
-          </div>
-        ) : filteredLedger.length === 0 ? (
-          <div className="py-16 text-center text-slate-400">
-            <Coins className="w-10 h-10 text-slate-600 mx-auto mb-3" />
-            <p className="text-sm font-medium text-slate-300">No ledger entries recorded</p>
-            <p className="text-xs text-slate-500 mt-1">
-              Token usage ledger entries are recorded synchronously for every model invocation.
-            </p>
-          </div>
-        ) : (
+        <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
-                <tr className="border-b border-slate-800 bg-slate-950/50 text-slate-400 font-medium">
+                <tr className="border-b border-[#262626] bg-[#0B0B0B] text-[11px] font-mono text-[#737373] uppercase tracking-wider">
                   <th className="py-3 px-4">Timestamp</th>
                   <th className="py-3 px-4">AI Employee</th>
-                  <th className="py-3 px-4">Model & Provider</th>
-                  <th className="py-3 px-4">Operation</th>
-                  <th className="py-3 px-4">Tokens (In / Out / Tot)</th>
-                  <th className="py-3 px-4 text-right">Cost (USD)</th>
-                  <th className="py-3 px-4 text-center">Status</th>
+                  <th className="py-3 px-4">Model</th>
+                  <th className="py-3 px-4">In Tokens</th>
+                  <th className="py-3 px-4">Out Tokens</th>
+                  <th className="py-3 px-4">Total Tokens</th>
+                  <th className="py-3 px-4 text-right">Calculated Cost</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/50">
-                {filteredLedger.map((row) => (
-                  <tr key={row.id} className="hover:bg-slate-800/40 transition">
-                    <td className="py-3 px-4 text-slate-400">
-                      {new Date(row.created_at).toLocaleTimeString([], {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        second: '2-digit',
-                      })}
-                    </td>
-                    <td className="py-3 px-4 font-medium text-slate-300">
-                      {getEmployeeName(row.ai_employee_id)}
-                    </td>
-                    <td className="py-3 px-4 font-mono text-purple-400">
-                      <span>{row.model}</span>
-                      <span className="text-[10px] text-slate-500 block">{row.provider}</span>
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className="px-2 py-0.5 rounded font-mono text-[11px] bg-slate-800 text-slate-300 border border-slate-700">
-                        {row.operation_type}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 font-mono text-slate-300">
-                      <span>
-                        {row.input_tokens.toLocaleString()} / {row.output_tokens.toLocaleString()}
-                      </span>
-                      <span className="text-slate-500 text-[11px] block">
-                        tot: {row.total_tokens.toLocaleString()}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-right font-mono font-medium text-emerald-400">
-                      ${row.estimated_cost.toFixed(6)}
-                    </td>
-                    <td className="py-3 px-4 text-center">
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                        {row.cost_status}
-                      </span>
+              <tbody className="divide-y divide-[#262626] font-mono text-[11px]">
+                {loading ? (
+                  <tr>
+                    <td colSpan={7} className="py-10 text-center text-[#737373] font-sans">
+                      Loading ledger entries...
                     </td>
                   </tr>
-                ))}
+                ) : filteredLedger.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-10 text-center text-[#737373] font-sans">
+                      No usage entries recorded for this selection.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredLedger.map((row) => (
+                    <tr key={row.id} className="hover:bg-[#151515]/60 transition-colors">
+                      <td className="py-3 px-4 text-[#737373]">
+                        {new Date(row.created_at).toLocaleTimeString([], {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          second: '2-digit',
+                        })}
+                      </td>
+                      <td className="py-3 px-4 font-sans text-[#F5F5F5] font-medium">
+                        {getEmployeeName(row.ai_employee_id)}
+                      </td>
+                      <td className="py-3 px-4 text-[#FF9D00]">{row.model}</td>
+                      <td className="py-3 px-4 text-[#737373]">{(row.input_tokens || 0).toLocaleString()}</td>
+                      <td className="py-3 px-4 text-[#737373]">{(row.output_tokens || 0).toLocaleString()}</td>
+                      <td className="py-3 px-4 font-bold text-[#F5F5F5]">
+                        {(row.total_tokens || 0).toLocaleString()}
+                      </td>
+                      <td className="py-3 px-4 text-right font-bold text-[#FF9D00]">
+                        ${(row.estimated_cost || 0).toFixed(5)}
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
-        )}
-      </div>
+        </CardContent>
+      </Card>
 
-      {/* Create Budget Modal */}
+      {/* CREATE BUDGET MODAL */}
       {isBudgetModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-xl shadow-2xl p-6 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div className="flex items-center gap-2">
-                <CreditCard className="w-5 h-5 text-emerald-400" />
-                <h3 className="text-base font-bold text-white">Create Spend Budget Policy</h3>
-              </div>
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#101010] border border-[#262626] rounded-xl w-full max-w-md p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-[#262626]">
+              <h3 className="text-sm font-semibold font-display text-[#F5F5F5] flex items-center gap-2">
+                <DollarSign className="w-4 h-4 text-[#FF9D00]" />
+                <span>Create Spend Budget Policy</span>
+              </h3>
               <button
                 onClick={() => setIsBudgetModalOpen(false)}
-                className="text-slate-400 hover:text-white"
+                className="text-[#737373] hover:text-[#F5F5F5] p-1 rounded hover:bg-[#1A1A1A]"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
             {budgetError && (
-              <div className="p-3 rounded-lg bg-rose-950/40 border border-rose-800/60 text-xs text-rose-300 flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
-                <span>{budgetError}</span>
+              <div className="p-3 rounded-lg bg-rose-950/40 border border-rose-900/60 text-rose-300 text-xs">
+                {budgetError}
               </div>
             )}
 
             <form onSubmit={handleCreateBudget} className="space-y-4 text-xs">
               <div>
-                <label className="block text-slate-300 font-medium mb-1">
-                  Budget Policy Name *
-                </label>
+                <label className="block text-[#A1A1AA] font-medium mb-1.5">Policy Name *</label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Monthly Global Token Cap"
                   value={budgetName}
                   onChange={(e) => setBudgetName(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-emerald-500"
+                  placeholder="e.g. Monthly Support Budget"
+                  className="w-full bg-[#050505] border border-[#262626] rounded-lg px-3.5 py-2 text-[#F5F5F5] placeholder-[#737373] focus:outline-none focus:border-[#FF9D00]"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-slate-300 font-medium mb-1">
-                    Limit Amount (USD) *
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-2.5 text-slate-500">$</span>
-                    <input
-                      type="number"
-                      step="0.01"
-                      required
-                      min="0.01"
-                      value={budgetLimit}
-                      onChange={(e) => setBudgetLimit(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-lg py-2.5 pl-7 pr-3 text-slate-200 focus:outline-none focus:border-emerald-500 font-mono"
-                    />
-                  </div>
+                  <label className="block text-[#A1A1AA] font-medium mb-1.5">Spend Cap ($ USD) *</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="1"
+                    required
+                    value={budgetLimit}
+                    onChange={(e) => setBudgetLimit(e.target.value)}
+                    className="w-full bg-[#050505] border border-[#262626] rounded-lg px-3.5 py-2 text-[#F5F5F5] font-mono focus:outline-none focus:border-[#FF9D00]"
+                  />
                 </div>
 
                 <div>
-                  <label className="block text-slate-300 font-medium mb-1">
-                    Period Frequency
-                  </label>
+                  <label className="block text-[#A1A1AA] font-medium mb-1.5">Reset Interval</label>
                   <select
                     value={budgetPeriod}
                     onChange={(e) => setBudgetPeriod(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-emerald-500"
+                    className="w-full bg-[#050505] border border-[#262626] rounded-lg px-3 py-2 text-[#F5F5F5] focus:outline-none focus:border-[#FF9D00]"
                   >
                     <option value="MONTHLY">Monthly</option>
-                    <option value="WEEKLY">Weekly</option>
                     <option value="DAILY">Daily</option>
+                    <option value="LIFETIME">Lifetime Cap</option>
                   </select>
                 </div>
               </div>
 
               <div>
-                <label className="block text-slate-300 font-medium mb-1">
-                  Scope Target
-                </label>
+                <label className="block text-[#A1A1AA] font-medium mb-1.5">Target AI Employee</label>
                 <select
                   value={budgetEmployeeId}
                   onChange={(e) => setBudgetEmployeeId(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-emerald-500"
+                  className="w-full bg-[#050505] border border-[#262626] rounded-lg px-3 py-2 text-[#F5F5F5] focus:outline-none focus:border-[#FF9D00]"
                 >
-                  <option value="GLOBAL">Company-wide (All AI Employees)</option>
-                  {employees.map((emp) => (
-                    <option key={emp.id} value={emp.id}>
-                      {emp.name} (Specific Employee)
+                  <option value="GLOBAL">Company-wide (All Employees)</option>
+                  {employees.map((e) => (
+                    <option key={e.id} value={e.id}>
+                      {e.name}
                     </option>
                   ))}
                 </select>
               </div>
 
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-slate-300 font-medium">
-                    Soft Limit Warning Threshold
-                  </label>
-                  <span className="font-mono text-emerald-400 font-semibold">
-                    {budgetSoftLimit}%
-                  </span>
+              <div className="p-3 bg-[#0B0B0B] rounded-lg border border-[#262626] flex items-center justify-between">
+                <div>
+                  <div className="text-[#F5F5F5] font-medium">Hard Enforcement</div>
+                  <div className="text-[10px] text-[#737373]">Block model requests once cap is reached</div>
                 </div>
                 <input
-                  type="range"
-                  min="50"
-                  max="99"
-                  value={budgetSoftLimit}
-                  onChange={(e) => setBudgetSoftLimit(Number(e.target.value))}
-                  className="w-full accent-emerald-500 cursor-pointer"
+                  type="checkbox"
+                  checked={budgetHardLimit}
+                  onChange={(e) => setBudgetHardLimit(e.target.checked)}
+                  className="w-4 h-4 accent-[#FF9D00] cursor-pointer"
                 />
-                <p className="text-[11px] text-slate-500 mt-1">
-                  Alerts are issued when usage reaches {budgetSoftLimit}% of the configured limit.
-                </p>
               </div>
 
-              <div className="pt-2 border-t border-slate-800">
-                <label className="flex items-start gap-2.5 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={budgetHardLimit}
-                    onChange={(e) => setBudgetHardLimit(e.target.checked)}
-                    className="mt-0.5 rounded border-slate-800 bg-slate-950 accent-emerald-500"
-                  />
-                  <div>
-                    <span className="font-semibold text-slate-200">
-                      Enforce Hard Limit Block
-                    </span>
-                    <p className="text-[11px] text-slate-400">
-                      When enabled, any LLM invocation exceeding 100% of this budget will return an HTTP 429 BUDGET_EXCEEDED error.
-                    </p>
-                  </div>
-                </label>
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
-                <button
+              <div className="pt-3 border-t border-[#262626] flex justify-end gap-2">
+                <Button
                   type="button"
+                  variant="secondary"
+                  size="sm"
                   onClick={() => setIsBudgetModalOpen(false)}
-                  className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium transition"
                 >
                   Cancel
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
-                  disabled={creatingBudget}
-                  className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium transition shadow-md shadow-emerald-950 disabled:opacity-50"
+                  variant="orange"
+                  size="sm"
+                  loading={creatingBudget}
                 >
-                  {creatingBudget ? 'Creating...' : 'Save Budget Policy'}
-                </button>
+                  Create Policy
+                </Button>
               </div>
             </form>
           </div>

@@ -4,7 +4,8 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
-import { Sparkles, ArrowRight, AlertCircle, Loader2 } from 'lucide-react';
+import { ArrowRight, AlertCircle, Loader2 } from 'lucide-react';
+import Logo from '@/components/brand/Logo';
 
 export default function SignupPage() {
   const router = useRouter();
@@ -40,26 +41,23 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0b0f19] flex flex-col justify-center items-center px-4 py-12">
+    <div className="min-h-screen bg-[#050505] flex flex-col justify-center items-center px-4 py-12 font-sans selection:bg-orange-950 selection:text-orange-300">
       <div className="max-w-md w-full">
         {/* Header */}
-        <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center gap-2 mb-4">
-            <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30">
-              <Sparkles className="w-5 h-5" />
-            </div>
-            <span className="font-bold text-xl text-white">AI Employee.OS</span>
-          </Link>
-          <h2 className="text-2xl font-bold text-slate-100">Create your account</h2>
-          <p className="mt-1 text-sm text-slate-400">
-            Provision a multi-tenant workspace for your AI employees
+        <div className="text-center mb-8 flex flex-col items-center">
+          <div className="mb-4">
+            <Logo variant="full" href="/" />
+          </div>
+          <h2 className="text-xl font-display font-bold text-[#F5F5F5] tracking-tight">Create your enterprise account</h2>
+          <p className="mt-1 text-xs text-[#737373]">
+            Provision an isolated multi-tenant workspace for your AI employees
           </p>
         </div>
 
         {/* Card */}
-        <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-6 shadow-xl backdrop-blur-sm">
+        <div className="bg-[#101010] border border-[#262626] rounded-xl p-6 sm:p-7 shadow-card">
           {error && (
-            <div className="mb-4 p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 text-sm flex items-start gap-2">
+            <div className="mb-4 p-3 rounded-lg bg-rose-950/60 border border-rose-800/50 text-rose-300 text-xs flex items-start gap-2">
               <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
               <span>{error}</span>
             </div>
@@ -67,7 +65,7 @@ export default function SignupPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">
+              <label className="block text-xs font-medium text-[#A1A1AA] mb-1.5">
                 Your Full Name
               </label>
               <input
@@ -76,12 +74,12 @@ export default function SignupPage() {
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 placeholder="Jane Doe"
-                className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full px-3.5 py-2 bg-[#151515] border border-[#262626] rounded-lg text-xs text-[#F5F5F5] placeholder-[#737373] focus:outline-none focus:ring-1 focus:ring-[#FF9D00]/40 focus:border-[#FF9D00] transition-editorial"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">
+              <label className="block text-xs font-medium text-[#A1A1AA] mb-1.5">
                 Company / Organization Name
               </label>
               <input
@@ -90,12 +88,12 @@ export default function SignupPage() {
                 value={companyName}
                 onChange={(e) => setCompanyName(e.target.value)}
                 placeholder="Acme Corp"
-                className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full px-3.5 py-2 bg-[#151515] border border-[#262626] rounded-lg text-xs text-[#F5F5F5] placeholder-[#737373] focus:outline-none focus:ring-1 focus:ring-[#FF9D00]/40 focus:border-[#FF9D00] transition-editorial"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">
+              <label className="block text-xs font-medium text-[#A1A1AA] mb-1.5">
                 Work Email Address
               </label>
               <input
@@ -104,12 +102,12 @@ export default function SignupPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="jane@acmecorp.com"
-                className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full px-3.5 py-2 bg-[#151515] border border-[#262626] rounded-lg text-xs text-[#F5F5F5] placeholder-[#737373] focus:outline-none focus:ring-1 focus:ring-[#FF9D00]/40 focus:border-[#FF9D00] transition-editorial"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">
+              <label className="block text-xs font-medium text-[#A1A1AA] mb-1.5">
                 Password
               </label>
               <input
@@ -119,23 +117,23 @@ export default function SignupPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Minimum 8 characters"
-                className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full px-3.5 py-2 bg-[#151515] border border-[#262626] rounded-lg text-xs text-[#F5F5F5] placeholder-[#737373] focus:outline-none focus:ring-1 focus:ring-[#FF9D00]/40 focus:border-[#FF9D00] transition-editorial"
               />
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm font-semibold rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 mt-6"
+              className="w-full py-2.5 px-4 bg-[#FF9D00] hover:bg-[#FF6A00] border border-[#FF9D00]/60 disabled:opacity-50 text-black text-xs font-semibold rounded-lg shadow-orange-sm transition-editorial flex items-center justify-center gap-2 mt-6"
             >
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Creating Workspace...
+                  <span>Creating Workspace...</span>
                 </>
               ) : (
                 <>
-                  Create Account & Workspace
+                  <span>Create Account &amp; Workspace</span>
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}
@@ -144,9 +142,9 @@ export default function SignupPage() {
         </div>
 
         {/* Footer */}
-        <p className="mt-6 text-center text-sm text-slate-400">
+        <p className="mt-6 text-center text-xs text-[#737373]">
           Already have an account?{' '}
-          <Link href="/login" className="text-indigo-400 hover:text-indigo-300 font-medium">
+          <Link href="/login" className="text-[#FF9D00] hover:text-[#FF6A00] font-medium transition-editorial">
             Sign In
           </Link>
         </p>
@@ -154,3 +152,4 @@ export default function SignupPage() {
     </div>
   );
 }
+

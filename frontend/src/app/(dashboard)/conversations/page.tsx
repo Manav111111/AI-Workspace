@@ -5,16 +5,19 @@ import Link from 'next/link';
 import {
   MessageSquare,
   Bot,
-  Mic,
-  Video,
-  Sparkles,
   ArrowRight,
   Clock,
   Trash2,
   AlertCircle,
+  Plus,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { AIEmployee, Conversation } from '@/types';
+import PageHeader from '@/components/ui/PageHeader';
+import Button from '@/components/ui/Button';
+import Badge from '@/components/ui/Badge';
+import { Card, CardContent } from '@/components/ui/Card';
+import EmptyState from '@/components/ui/EmptyState';
 
 export default function ConversationsPage() {
   const [employees, setEmployees] = useState<AIEmployee[]>([]);
@@ -54,190 +57,142 @@ export default function ConversationsPage() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8">
-      {/* Header */}
-      <div>
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-mono mb-2">
-          <span>Phase 2 Grounded Conversational Brain • LIVE</span>
-        </div>
-        <h1 className="text-2xl font-bold text-slate-100">Conversations &amp; Testing Console</h1>
-        <p className="text-sm text-slate-400 mt-1">
-          Interact with your AI Employees grounded in company documents with full source citations.
-        </p>
-      </div>
+    <div className="max-w-7xl mx-auto space-y-6">
+      <PageHeader
+        title="Conversations & Testing"
+        description="Review past sessions and interact with your AI Employees grounded in company knowledge base documents."
+        badge={<Badge variant="orange">Multi-Turn History</Badge>}
+      />
 
       {error && (
-        <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 shrink-0" />
+        <div className="p-3.5 rounded-lg bg-rose-950/40 border border-rose-900/60 text-rose-300 text-xs flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
           <span>{error}</span>
         </div>
       )}
 
       {/* Select an AI Employee to Chat With */}
-      <section className="space-y-4">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-400">
-          Start a Chat with an AI Employee
+      <section className="space-y-3">
+        <h2 className="text-[11px] font-mono uppercase tracking-wider text-[#737373]">
+          Start a Session with an AI Employee
         </h2>
 
         {loading ? (
-          <div className="h-24 flex items-center justify-center text-slate-500 text-xs">
+          <div className="h-24 flex items-center justify-center text-[#737373] text-xs font-mono">
             Loading AI Employees...
           </div>
         ) : employees.length === 0 ? (
-          <div className="p-6 rounded-xl bg-slate-900/60 border border-slate-800 text-center space-y-2">
-            <Bot className="w-8 h-8 text-slate-500 mx-auto" />
-            <p className="text-sm text-slate-300">No AI Employees created yet.</p>
-            <Link
-              href="/ai-employees"
-              className="inline-flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 font-medium"
-            >
-              <span>Create an AI Employee</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
-          </div>
+          <EmptyState
+            icon={Bot}
+            title="No AI Employees created"
+            description="Create an AI employee to begin interactive conversations."
+            actionText="Create AI Employee"
+            actionIcon={Plus}
+            onAction={() => (window.location.href = '/ai-employees')}
+          />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {employees.map((emp) => (
-              <div
+              <Link
                 key={emp.id}
-                className="p-5 rounded-xl bg-slate-900/60 border border-slate-800 hover:border-slate-700 transition-all flex flex-col justify-between"
+                href={`/ai-employees/${emp.id}/chat`}
+                className="group"
               >
-                <div>
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-md shadow-indigo-500/20">
-                      <Bot className="w-5 h-5" />
+                <div className="p-4 rounded-lg bg-[#101010] border border-[#262626] group-hover:border-[#FF9D00]/50 transition-all flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-[#151515] border border-[#262626] flex items-center justify-center text-[#FF9D00] group-hover:bg-[#FF9D00]/10 transition-colors shrink-0">
+                      <Bot className="w-4 h-4" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-white text-sm">{emp.name}</h3>
-                      <p className="text-xs text-slate-400">{emp.role}</p>
+                      <h3 className="text-xs font-semibold text-[#F5F5F5] group-hover:text-[#FF9D00] transition-colors">
+                        {emp.name}
+                      </h3>
+                      <p className="text-[11px] text-[#A1A1AA] font-mono mt-0.5">{emp.role}</p>
                     </div>
                   </div>
-                  {emp.description && (
-                    <p className="text-xs text-slate-400 line-clamp-2 mb-4">
-                      {emp.description}
-                    </p>
-                  )}
+                  <ArrowRight className="w-4 h-4 text-[#737373] group-hover:text-[#FF9D00] group-hover:translate-x-0.5 transition-all" />
                 </div>
-
-                <Link
-                  href={`/ai-employees/${emp.id}/chat`}
-                  className="w-full py-2 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center justify-center gap-2 transition-colors mt-2"
-                >
-                  <MessageSquare className="w-3.5 h-3.5" />
-                  <span>Open Chat Console</span>
-                </Link>
-              </div>
+              </Link>
             ))}
           </div>
         )}
       </section>
 
-      {/* Recent Conversation History */}
-      <section className="space-y-4">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-400">
-          Recent Conversations
+      {/* Recent Conversation History List */}
+      <section className="space-y-3">
+        <h2 className="text-[11px] font-mono uppercase tracking-wider text-[#737373]">
+          Recent Conversation Sessions ({conversations.length})
         </h2>
 
         {loading ? (
-          <div className="h-20 flex items-center justify-center text-slate-500 text-xs">
-            Loading conversations...
+          <div className="h-24 flex items-center justify-center text-[#737373] text-xs font-mono">
+            Loading conversation threads...
           </div>
         ) : conversations.length === 0 ? (
-          <div className="p-6 rounded-xl bg-slate-900/40 border border-slate-800/80 text-center text-xs text-slate-500">
-            No past conversations recorded. Start a chat above!
+          <div className="p-8 text-center border border-dashed border-[#262626] rounded-lg bg-[#101010] text-xs text-[#737373]">
+            No active conversation sessions found. Click on an AI Employee above to start chatting!
           </div>
         ) : (
-          <div className="divide-y divide-slate-800/60 rounded-xl bg-slate-900/40 border border-slate-800/80 overflow-hidden">
-            {conversations.map((c) => {
-              const emp = employees.find((e) => e.id === c.ai_employee_id);
-              return (
-                <div
-                  key={c.id}
-                  className="p-4 hover:bg-slate-800/40 transition-colors flex items-center justify-between gap-4"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center text-indigo-400 shrink-0">
-                      <MessageSquare className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-medium text-slate-200">{c.title}</h4>
-                      <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
-                        <span>With {emp ? emp.name : 'AI Employee'}</span>
-                        <span>•</span>
-                        <span className="flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          {new Date(c.created_at).toLocaleString([], {
-                            month: 'short',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </span>
+          <Card>
+            <div className="divide-y divide-[#262626]">
+              {conversations.map((c) => {
+                const emp = employees.find((e) => e.id === c.ai_employee_id);
+                return (
+                  <div
+                    key={c.id}
+                    className="p-4 flex items-center justify-between hover:bg-[#151515]/60 transition-colors"
+                  >
+                    <div className="flex items-center gap-3.5 truncate pr-4">
+                      <div className="w-8 h-8 rounded-lg bg-[#151515] border border-[#262626] flex items-center justify-center text-[#737373] shrink-0">
+                        <MessageSquare className="w-4 h-4 text-[#FF9D00]" />
+                      </div>
+                      <div className="truncate">
+                        <Link
+                          href={`/ai-employees/${c.ai_employee_id}/chat`}
+                          className="text-xs font-medium text-[#F5F5F5] hover:text-[#FF9D00] transition-colors block truncate"
+                        >
+                          {c.title}
+                        </Link>
+                        <div className="flex items-center gap-2 text-[11px] text-[#737373] mt-0.5">
+                          <span className="text-[#FF9D00] font-mono font-medium">
+                            {emp?.name || 'AI Employee'}
+                          </span>
+                          <span>&bull;</span>
+                          <span className="flex items-center gap-1 font-mono">
+                            <Clock className="w-3 h-3" />
+                            {new Date(c.created_at).toLocaleDateString([], {
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="flex items-center gap-2">
-                    <Link
-                      href={`/ai-employees/${c.ai_employee_id}/chat`}
-                      className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium transition-colors"
-                    >
-                      Resume
-                    </Link>
-                    <button
-                      onClick={() => handleDelete(c.id)}
-                      className="p-1.5 text-slate-500 hover:text-rose-400 rounded transition-colors"
-                      title="Delete conversation"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Link
+                        href={`/ai-employees/${c.ai_employee_id}/chat`}
+                        className="px-3 py-1.5 rounded-lg bg-[#151515] hover:bg-[#1E1E1E] border border-[#262626] text-xs text-[#F5F5F5] font-medium flex items-center gap-1.5 transition-colors"
+                      >
+                        <span>Resume</span>
+                        <ArrowRight className="w-3.5 h-3.5 text-[#FF9D00]" />
+                      </Link>
+                      <button
+                        onClick={() => handleDelete(c.id)}
+                        className="p-1.5 text-[#737373] hover:text-rose-400 hover:bg-[#1A1A1A] rounded transition-colors"
+                        title="Delete session"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          </Card>
         )}
-      </section>
-
-      {/* Multimodal Roadmap Cards */}
-      <section className="pt-4 border-t border-slate-800/80">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-4">
-          Decoupled Multi-Channel Architecture
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/20">
-            <div className="flex items-center gap-2 text-emerald-400 mb-2">
-              <MessageSquare className="w-4 h-4" />
-              <span className="text-xs font-bold uppercase tracking-wider">Phase 2 • LIVE</span>
-            </div>
-            <h3 className="font-semibold text-white text-sm">Grounded Chat Engine</h3>
-            <p className="mt-1 text-xs text-slate-400">
-              Qdrant vector retrieval, citations, bounded context, and LLM reasoning.
-            </p>
-          </div>
-
-          <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800/80">
-            <div className="flex items-center gap-2 text-indigo-400 mb-2">
-              <Mic className="w-4 h-4" />
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Upcoming</span>
-            </div>
-            <h3 className="font-semibold text-white text-sm">Real-Time Voice Streaming</h3>
-            <p className="mt-1 text-xs text-slate-400">
-              Low-latency STT and TTS re-using this same conversational brain.
-            </p>
-          </div>
-
-          <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800/80">
-            <div className="flex items-center gap-2 text-pink-400 mb-2">
-              <Video className="w-4 h-4" />
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Upcoming</span>
-            </div>
-            <h3 className="font-semibold text-white text-sm">3D Avatar Presentation</h3>
-            <p className="mt-1 text-xs text-slate-400">
-              Decoupled presentation layer with facial blendshapes and gestures.
-            </p>
-          </div>
-        </div>
       </section>
     </div>
   );

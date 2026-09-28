@@ -12,15 +12,21 @@ import {
   AlertCircle,
   CheckCircle2,
   Loader2,
-  ArrowLeft,
   X,
   FileCode,
   FileSpreadsheet,
   Layers,
   Database,
-  Info,
   RotateCcw,
+  Sparkles,
+  Search,
+  ExternalLink,
 } from 'lucide-react';
+import PageHeader from '@/components/ui/PageHeader';
+import Button from '@/components/ui/Button';
+import Badge from '@/components/ui/Badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import EmptyState from '@/components/ui/EmptyState';
 
 export default function KnowledgeBasePage() {
   const [knowledgeBases, setKnowledgeBases] = useState<KnowledgeBase[]>([]);
@@ -137,7 +143,7 @@ export default function KnowledgeBasePage() {
     setSuccess(null);
 
     try {
-      const doc = await api.uploadDocument(selectedKb.id, file);
+      await api.uploadDocument(selectedKb.id, file);
       setSuccess(`Document "${file.name}" accepted. Ingestion processing in background.`);
       await loadDocuments(selectedKb.id);
     } catch (err: any) {
@@ -197,248 +203,247 @@ export default function KnowledgeBasePage() {
 
   const getFileIcon = (fileType: string) => {
     const ft = fileType.toLowerCase();
-    if (ft === 'pdf') return <FileText className="w-5 h-5 text-rose-400" />;
-    if (ft === 'docx') return <FileText className="w-5 h-5 text-blue-400" />;
-    if (ft === 'md') return <FileCode className="w-5 h-5 text-emerald-400" />;
-    if (ft === 'csv') return <FileSpreadsheet className="w-5 h-5 text-amber-400" />;
-    return <FileText className="w-5 h-5 text-slate-400" />;
+    if (ft === 'pdf') return <FileText className="w-4 h-4 text-[#FF9D00]" />;
+    if (ft === 'docx') return <FileText className="w-4 h-4 text-blue-400" />;
+    if (ft === 'md') return <FileCode className="w-4 h-4 text-emerald-400" />;
+    if (ft === 'csv') return <FileSpreadsheet className="w-4 h-4 text-amber-400" />;
+    return <FileText className="w-4 h-4 text-[#A1A1AA]" />;
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
-      {/* Top Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 text-xs font-mono mb-2">
-            <Database className="w-3.5 h-3.5" />
-            <span>Phase 1: Knowledge Ingestion &amp; Qdrant Vectors</span>
-          </div>
-          <h1 className="text-2xl font-bold text-slate-100">Knowledge Base Management</h1>
-          <p className="text-sm text-slate-400 mt-1">
-            Upload company policies, manuals, and datasets to generate indexed semantic embeddings.
-          </p>
-        </div>
-
-        <button
-          onClick={() => setIsKbModalOpen(true)}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold rounded-lg shadow-sm transition-all"
-        >
-          <Plus className="w-4 h-4" />
-          New Knowledge Base
-        </button>
-      </div>
+    <div className="max-w-7xl mx-auto space-y-6">
+      {/* Page Header */}
+      <PageHeader
+        title="Knowledge Base Management"
+        description="Upload company documents, policies, and datasets to index semantic vector chunks into Qdrant & BM25 sparse indexes."
+        badge={<Badge variant="orange">Hybrid Retrieval RAG</Badge>}
+        actions={
+          <Button
+            variant="orange"
+            size="sm"
+            icon={Plus}
+            onClick={() => setIsKbModalOpen(true)}
+          >
+            New Knowledge Base
+          </Button>
+        }
+      />
 
       {/* Notifications */}
       {error && (
-        <div className="p-4 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 text-sm flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 shrink-0" />
+        <div className="p-3.5 rounded-lg bg-rose-950/40 border border-rose-900/60 text-rose-300 text-xs flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
           <span>{error}</span>
         </div>
       )}
       {success && (
-        <div className="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4 shrink-0" />
+        <div className="p-3.5 rounded-lg bg-emerald-950/40 border border-emerald-900/60 text-emerald-300 text-xs flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
           <span>{success}</span>
         </div>
       )}
 
       {/* Main Content Layout */}
       {loading ? (
-        <div className="py-16 text-center text-sm text-slate-500">Loading knowledge infrastructure...</div>
-      ) : knowledgeBases.length === 0 ? (
-        <div className="py-16 text-center border border-dashed border-slate-800 rounded-xl bg-slate-900/40">
-          <BookOpen className="w-12 h-12 text-slate-600 mx-auto mb-3" />
-          <h3 className="text-base font-semibold text-slate-200">No Knowledge Bases Found</h3>
-          <p className="text-sm text-slate-400 mt-1 max-w-md mx-auto">
-            Create your first company knowledge base to begin uploading documentation, PDFs, and data.
-          </p>
-          <button
-            onClick={() => setIsKbModalOpen(true)}
-            className="mt-5 inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold rounded-lg"
-          >
-            <Plus className="w-4 h-4" /> Create Knowledge Base
-          </button>
+        <div className="py-20 text-center text-xs text-[#737373] font-mono">
+          Loading knowledge infrastructure...
         </div>
+      ) : knowledgeBases.length === 0 ? (
+        <EmptyState
+          icon={BookOpen}
+          title="No Knowledge Bases Found"
+          description="Create your first company knowledge base to begin uploading documentation, PDFs, and policy guidelines."
+          actionText="Create Knowledge Base"
+          actionIcon={Plus}
+          onAction={() => setIsKbModalOpen(true)}
+        />
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Knowledge Bases Sidebar List */}
           <div className="lg:col-span-1 space-y-2">
-            <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
-              Knowledge Bases ({knowledgeBases.length})
-            </h2>
-            {knowledgeBases.map((kb) => (
-              <button
-                key={kb.id}
-                onClick={() => setSelectedKb(kb)}
-                className={`w-full text-left p-3 rounded-lg border transition-all flex items-start justify-between ${
-                  selectedKb?.id === kb.id
-                    ? 'bg-indigo-600/15 border-indigo-500/40 text-white'
-                    : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'
-                }`}
-              >
-                <div className="truncate">
-                  <div className="font-semibold text-sm truncate">{kb.name}</div>
-                  {kb.description && (
-                    <div className="text-xs text-slate-400 truncate mt-0.5">{kb.description}</div>
-                  )}
-                </div>
-              </button>
-            ))}
+            <div className="flex items-center justify-between mb-3 px-1">
+              <h2 className="text-[11px] font-mono uppercase tracking-wider text-[#737373]">
+                Knowledge Bases ({knowledgeBases.length})
+              </h2>
+            </div>
+            <div className="space-y-1.5">
+              {knowledgeBases.map((kb) => {
+                const isSelected = selectedKb?.id === kb.id;
+                return (
+                  <button
+                    key={kb.id}
+                    onClick={() => setSelectedKb(kb)}
+                    className={`w-full text-left p-3.5 rounded-lg border transition-all flex items-start justify-between ${
+                      isSelected
+                        ? 'bg-[#151515] border-[#FF9D00]/40 text-[#F5F5F5] shadow-sm'
+                        : 'bg-[#101010] border-[#262626] text-[#A1A1AA] hover:bg-[#151515] hover:border-[#333333] hover:text-[#F5F5F5]'
+                    }`}
+                  >
+                    <div className="truncate pr-2">
+                      <div className="font-medium text-xs truncate text-[#F5F5F5]">{kb.name}</div>
+                      {kb.description && (
+                        <div className="text-[11px] text-[#737373] truncate mt-0.5">{kb.description}</div>
+                      )}
+                    </div>
+                    {isSelected && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#FF9D00] shrink-0 mt-1.5 shadow-[0_0_8px_rgba(255,157,0,0.6)]" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* Selected Knowledge Base & Documents Panel */}
           <div className="lg:col-span-3 space-y-5">
             {selectedKb ? (
-              <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-6 space-y-6">
-                {/* KB Header */}
-                <div className="flex items-start justify-between pb-4 border-b border-slate-800">
+              <Card>
+                <CardHeader>
                   <div>
-                    <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                      <BookOpen className="w-5 h-5 text-indigo-400" />
-                      {selectedKb.name}
+                    <h2 className="text-sm font-semibold font-display text-[#F5F5F5] flex items-center gap-2">
+                      <BookOpen className="w-4 h-4 text-[#FF9D00]" />
+                      <span>{selectedKb.name}</span>
                     </h2>
                     {selectedKb.description && (
-                      <p className="text-xs text-slate-400 mt-1">{selectedKb.description}</p>
+                      <p className="text-xs text-[#737373] mt-0.5">{selectedKb.description}</p>
                     )}
                   </div>
                   <button
                     onClick={() => handleDeleteKb(selectedKb)}
-                    className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded transition-colors"
+                    className="p-1.5 text-[#737373] hover:text-rose-400 hover:bg-[#1A1A1A] rounded transition-colors"
                     title="Delete Knowledge Base"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
-                </div>
+                </CardHeader>
 
-                {/* Upload Box */}
-                <div className="p-6 border-2 border-dashed border-slate-700/80 rounded-xl bg-slate-950/40 text-center">
-                  <UploadCloud className="w-10 h-10 text-indigo-400 mx-auto mb-2" />
-                  <h3 className="text-sm font-semibold text-slate-200">
-                    Upload documents to index into vector search
-                  </h3>
-                  <p className="text-xs text-slate-400 mt-1">
-                    Supported formats: PDF, DOCX, Markdown, TXT, CSV (up to 25MB)
-                  </p>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".pdf,.docx,.md,.txt,.csv,text/markdown,text/plain,text/csv,application/pdf"
-                    onChange={handleFileUpload}
-                    className="hidden"
-                    id="doc-upload"
-                    disabled={uploading}
-                  />
-                  <label
-                    htmlFor="doc-upload"
-                    className={`mt-4 inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg cursor-pointer transition-all ${
-                      uploading ? 'opacity-50 pointer-events-none' : ''
-                    }`}
-                  >
-                    {uploading ? (
-                      <>
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        Extracting &amp; Vectorizing Chunks...
-                      </>
-                    ) : (
-                      <>
-                        <Plus className="w-3.5 h-3.5" /> Select File to Ingest
-                      </>
-                    )}
-                  </label>
-                </div>
-
-                {/* Document List */}
-                <div>
-                  <h3 className="text-sm font-semibold text-slate-200 mb-3">
-                    Ingested Documents ({documents.length})
-                  </h3>
-
-                  {docsLoading ? (
-                    <div className="py-8 text-center text-xs text-slate-500">Loading documents...</div>
-                  ) : documents.length === 0 ? (
-                    <div className="py-8 text-center text-xs text-slate-500">
-                      No documents uploaded to this knowledge base yet.
+                <CardContent className="space-y-6">
+                  {/* Upload Box */}
+                  <div className="p-7 border border-dashed border-[#262626] hover:border-[#FF9D00]/40 rounded-lg bg-[#0B0B0B] text-center transition-all">
+                    <div className="w-10 h-10 rounded-lg bg-[#151515] border border-[#262626] flex items-center justify-center mx-auto mb-3">
+                      <UploadCloud className="w-5 h-5 text-[#FF9D00]" />
                     </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {documents.map((doc) => (
-                        <div
-                          key={doc.id}
-                          className="flex items-center justify-between p-3 rounded-lg bg-slate-800/40 border border-slate-700/60 hover:border-slate-600 transition-colors"
-                        >
-                          <div className="flex items-center gap-3 truncate">
-                            {getFileIcon(doc.file_type)}
-                            <div className="truncate">
-                              <div className="text-sm font-medium text-slate-200 truncate">
-                                {doc.original_filename}
+                    <h3 className="text-xs font-medium text-[#F5F5F5]">
+                      Upload documents to index into hybrid vector search
+                    </h3>
+                    <p className="text-[11px] text-[#737373] mt-1">
+                      Supported formats: PDF, DOCX, Markdown, TXT, CSV (up to 25MB)
+                    </p>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".pdf,.docx,.md,.txt,.csv,text/markdown,text/plain,text/csv,application/pdf"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                      id="doc-upload"
+                      disabled={uploading}
+                    />
+                    <label
+                      htmlFor="doc-upload"
+                      className={`mt-4 inline-flex items-center gap-2 px-4 py-2 bg-[#FF9D00] hover:bg-[#FF6A00] text-black text-xs font-semibold rounded-lg cursor-pointer transition-colors shadow-sm ${
+                        uploading ? 'opacity-50 pointer-events-none' : ''
+                      }`}
+                    >
+                      {uploading ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <span>Extracting & Vectorizing Chunks...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Select File to Ingest</span>
+                        </>
+                      )}
+                    </label>
+                  </div>
+
+                  {/* Document List */}
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-[11px] font-mono text-[#737373] uppercase tracking-wider">
+                        Indexed Documents ({documents.length})
+                      </h3>
+                    </div>
+
+                    {docsLoading ? (
+                      <div className="py-8 text-center text-xs text-[#737373] font-mono">Loading documents...</div>
+                    ) : documents.length === 0 ? (
+                      <div className="text-center py-8 text-xs text-[#737373] border border-dashed border-[#262626] rounded-lg">
+                        No documents uploaded to this knowledge base yet.
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {documents.map((doc) => (
+                          <div
+                            key={doc.id}
+                            className="p-3.5 rounded-lg bg-[#0B0B0B] border border-[#262626] flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors hover:border-[#333333]"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 rounded bg-[#151515] border border-[#262626]">
+                                {getFileIcon(doc.file_type)}
                               </div>
-                              <div className="text-xs text-slate-400 flex items-center gap-2 mt-0.5">
-                                <span className="uppercase font-mono text-[10px] px-1.5 py-0.5 rounded bg-slate-700">
-                                  {doc.file_type}
-                                </span>
-                                <span>{formatFileSize(doc.file_size)}</span>
-                                <span>&bull;</span>
-                                <span>
-                                  {doc.document_metadata?.total_chunks ?? '-'} chunks indexed
-                                </span>
+                              <div>
+                                <div className="text-xs font-medium text-[#F5F5F5]">{doc.original_filename}</div>
+                                <div className="flex items-center gap-2 text-[10px] text-[#737373] font-mono mt-0.5">
+                                  <span>{formatFileSize(doc.file_size)}</span>
+                                  <span>&bull;</span>
+                                  <span>{doc.chunk_count || 0} chunks</span>
+                                  <span>&bull;</span>
+                                  <span>{new Date(doc.created_at).toLocaleDateString()}</span>
+                                </div>
                               </div>
                             </div>
-                          </div>
 
-                          <div className="flex items-center gap-3">
-                            <span
-                              className={`text-[10px] px-2 py-0.5 rounded-full font-mono uppercase font-semibold flex items-center gap-1.5 ${
-                                doc.status === 'PROCESSED'
-                                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                                  : doc.status === 'PROCESSING'
-                                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20 animate-pulse'
-                                  : doc.status === 'QUEUED'
-                                  ? 'bg-sky-500/10 text-sky-400 border border-sky-500/20'
-                                  : doc.status === 'FAILED'
-                                  ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-                                  : 'bg-slate-500/10 text-slate-400 border border-slate-500/20'
-                              }`}
-                            >
-                              {(doc.status === 'PROCESSING' || doc.status === 'QUEUED') && (
-                                <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                            <div className="flex items-center gap-2 shrink-0">
+                              <Badge
+                                variant={
+                                  doc.status === 'PROCESSED'
+                                    ? 'forest'
+                                    : doc.status === 'PROCESSING' || doc.status === 'QUEUED' || doc.status === 'UPLOADED'
+                                    ? 'amber'
+                                    : 'rose'
+                                }
+                                dot
+                              >
+                                {doc.status}
+                              </Badge>
+
+                              {doc.status === 'FAILED' && (
+                                <button
+                                  onClick={() => handleRetryDoc(doc)}
+                                  className="p-1.5 text-amber-400 hover:bg-[#1A1A1A] rounded transition-colors"
+                                  title="Retry Ingestion"
+                                >
+                                  <RotateCcw className="w-3.5 h-3.5" />
+                                </button>
                               )}
-                              {doc.status}
-                            </span>
 
-                            {doc.status === 'FAILED' && (
+                              {doc.status === 'PROCESSED' && (
+                                <button
+                                  onClick={() => handleInspectChunks(doc)}
+                                  className="px-2.5 py-1 text-[11px] bg-[#151515] hover:bg-[#1E1E1E] border border-[#262626] text-[#A1A1AA] hover:text-[#F5F5F5] rounded font-medium transition-colors"
+                                  title="Inspect Chunks"
+                                >
+                                  Inspect Chunks
+                                </button>
+                              )}
+
                               <button
-                                onClick={() => handleRetryDoc(doc)}
-                                className="p-1.5 text-slate-400 hover:text-amber-300 hover:bg-slate-700 rounded transition-colors"
-                                title="Retry Ingestion Pipeline"
+                                onClick={() => handleDeleteDoc(doc)}
+                                className="p-1.5 text-[#737373] hover:text-rose-400 hover:bg-[#1A1A1A] rounded transition-colors"
+                                title="Delete Document"
                               >
-                                <RotateCcw className="w-4 h-4" />
+                                <Trash2 className="w-3.5 h-3.5" />
                               </button>
-                            )}
-
-                            {doc.status === 'PROCESSED' && (
-                              <button
-                                onClick={() => handleInspectChunks(doc)}
-                                className="p-1.5 text-slate-400 hover:text-indigo-300 hover:bg-slate-700 rounded transition-colors"
-                                title="Inspect Extracted Chunks"
-                              >
-                                <Layers className="w-4 h-4" />
-                              </button>
-                            )}
-
-                            <button
-                              onClick={() => handleDeleteDoc(doc)}
-                              className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-slate-700 rounded transition-colors"
-                              title="Delete Document &amp; Vectors"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                            </div>
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
             ) : null}
           </div>
         </div>
@@ -446,24 +451,24 @@ export default function KnowledgeBasePage() {
 
       {/* New KB Modal */}
       {isKbModalOpen && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-md p-6 shadow-2xl">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-800">
-              <h2 className="text-base font-bold text-white flex items-center gap-2">
-                <BookOpen className="w-5 h-5 text-indigo-400" />
-                Create Knowledge Base
-              </h2>
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#101010] border border-[#262626] rounded-xl w-full max-w-md p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-[#262626]">
+              <h3 className="text-sm font-semibold font-display text-[#F5F5F5] flex items-center gap-2">
+                <BookOpen className="w-4 h-4 text-[#FF9D00]" />
+                <span>Create Knowledge Base</span>
+              </h3>
               <button
                 onClick={() => setIsKbModalOpen(false)}
-                className="text-slate-400 hover:text-white"
+                className="text-[#737373] hover:text-[#F5F5F5] p-1 rounded hover:bg-[#1A1A1A]"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleCreateKb} className="mt-4 space-y-4">
+            <form onSubmit={handleCreateKb} className="space-y-4">
               <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">
+                <label className="block text-xs font-medium text-[#A1A1AA] mb-1.5">
                   Knowledge Base Name *
                 </label>
                 <input
@@ -471,38 +476,36 @@ export default function KnowledgeBasePage() {
                   required
                   value={newKbName}
                   onChange={(e) => setNewKbName(e.target.value)}
-                  placeholder="e.g. HR Policies, Support Documentation"
-                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="e.g. HR Policies, Product Manuals"
+                  className="w-full px-3.5 py-2 bg-[#050505] border border-[#262626] rounded-lg text-xs text-[#F5F5F5] placeholder-[#737373] focus:outline-none focus:border-[#FF9D00]"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">
+                <label className="block text-xs font-medium text-[#A1A1AA] mb-1.5">
                   Description
                 </label>
-                <textarea
-                  rows={3}
+                <input
+                  type="text"
                   value={newKbDesc}
                   onChange={(e) => setNewKbDesc(e.target.value)}
-                  placeholder="Description of contents in this knowledge collection..."
-                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="Scope of documents in this collection"
+                  className="w-full px-3.5 py-2 bg-[#050505] border border-[#262626] rounded-lg text-xs text-[#F5F5F5] placeholder-[#737373] focus:outline-none focus:border-[#FF9D00]"
                 />
               </div>
 
-              <div className="pt-4 border-t border-slate-800 flex justify-end gap-3">
-                <button
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#262626]">
+                <Button
                   type="button"
+                  variant="secondary"
+                  size="sm"
                   onClick={() => setIsKbModalOpen(false)}
-                  className="px-4 py-2 text-sm text-slate-400 hover:text-white"
                 >
                   Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold rounded-lg shadow-sm"
-                >
-                  Create
-                </button>
+                </Button>
+                <Button type="submit" variant="orange" size="sm">
+                  Create Knowledge Base
+                </Button>
               </div>
             </form>
           </div>
@@ -511,68 +514,54 @@ export default function KnowledgeBasePage() {
 
       {/* Chunks Inspector Modal */}
       {inspectingDoc && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-2xl p-6 shadow-2xl max-h-[85vh] flex flex-col">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-800 shrink-0">
-              <div>
-                <h2 className="text-base font-bold text-white flex items-center gap-2">
-                  <Layers className="w-5 h-5 text-indigo-400" />
-                  Vector Chunks: {inspectingDoc.original_filename}
-                </h2>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Semantic chunks indexed into Qdrant with tenant payload isolation.
-                </p>
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#101010] border border-[#262626] rounded-xl w-full max-w-2xl p-6 shadow-2xl max-h-[85vh] flex flex-col space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-[#262626] shrink-0">
+              <div className="flex items-center gap-2">
+                <Layers className="w-4 h-4 text-[#FF9D00]" />
+                <h3 className="text-sm font-semibold font-display text-[#F5F5F5]">
+                  Chunk Inspector: <span className="text-[#A1A1AA] font-normal">{inspectingDoc.original_filename}</span>
+                </h3>
               </div>
               <button
                 onClick={() => setInspectingDoc(null)}
-                className="text-slate-400 hover:text-white"
+                className="text-[#737373] hover:text-[#F5F5F5] p-1 rounded hover:bg-[#1A1A1A]"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto mt-4 space-y-3 pr-1">
+            <div className="flex-1 overflow-y-auto space-y-3 pr-1">
               {chunksLoading ? (
-                <div className="py-12 text-center text-xs text-slate-500">Loading vector chunks...</div>
+                <div className="py-12 text-center text-xs text-[#737373] font-mono">Loading vector chunks...</div>
               ) : chunks.length === 0 ? (
-                <div className="py-8 text-center text-xs text-slate-500">No chunks found for this document.</div>
+                <div className="py-12 text-center text-xs text-[#737373]">No chunks generated for this document.</div>
               ) : (
-                chunks.map((chunk) => (
+                chunks.map((chunk, idx) => (
                   <div
-                    key={chunk.id}
-                    className="p-3.5 rounded-lg bg-slate-800/50 border border-slate-700/60 text-xs space-y-2"
+                    key={chunk.id || idx}
+                    className="p-3.5 rounded-lg bg-[#0B0B0B] border border-[#262626] text-xs space-y-2"
                   >
-                    <div className="flex items-center justify-between text-slate-400 font-mono text-[11px]">
-                      <span className="font-semibold text-indigo-400">Chunk #{chunk.chunk_index + 1}</span>
-                      <span>~{chunk.token_count} tokens</span>
+                    <div className="flex items-center justify-between text-[11px] text-[#737373] font-mono">
+                      <span className="text-[#FF9D00]">Chunk #{chunk.chunk_index !== undefined ? chunk.chunk_index : idx + 1}</span>
+                      <span>Page {chunk.page_number || chunk.chunk_metadata?.page_number || 1} &bull; {chunk.token_count || 0} tokens</span>
                     </div>
-                    <p className="text-slate-200 whitespace-pre-wrap leading-relaxed font-mono text-[11px] bg-slate-950/60 p-2.5 rounded border border-slate-800">
+                    <div className="p-3 rounded bg-[#050505] border border-[#262626] text-[#D4D4D8] font-mono text-[11px] leading-relaxed whitespace-pre-wrap">
                       {chunk.content}
-                    </p>
-                    {chunk.chunk_metadata && Object.keys(chunk.chunk_metadata).length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 pt-1">
-                        {Object.entries(chunk.chunk_metadata).map(([k, v]) => (
-                          <span
-                            key={k}
-                            className="px-1.5 py-0.5 rounded bg-slate-900 border border-slate-700 text-[10px] text-slate-400 font-mono"
-                          >
-                            {k}: {String(v)}
-                          </span>
-                        ))}
-                      </div>
-                    )}
+                    </div>
                   </div>
                 ))
               )}
             </div>
 
-            <div className="pt-4 border-t border-slate-800 flex justify-end shrink-0">
-              <button
+            <div className="pt-3 border-t border-[#262626] flex justify-end shrink-0">
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => setInspectingDoc(null)}
-                className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold rounded-lg"
               >
                 Close
-              </button>
+              </Button>
             </div>
           </div>
         </div>

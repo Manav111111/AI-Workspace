@@ -2,14 +2,68 @@
 @tailwind components;
 @tailwind utilities;
 
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=JetBrains+Mono:wght@400;500;600;700&family=Syne:wght@400;500;600;700;800&display=swap');
+
 :root {
-  --background: #0b0f19;
-  --foreground: #f8fafc;
+  --background: #050505;
+  --foreground: #F5F5F5;
+  --surface-primary: #101010;
+  --surface-secondary: #0B0B0B;
+  --surface-elevated: #151515;
+  --surface-hover: #1A1A1A;
+  --surface-border: #262626;
+  --surface-border-subtle: #1C1C1C;
+  --orange-primary: #FF9D00;
+  --orange-secondary: #FF6A00;
+  --orange-highlight: #FFC247;
+  --text-primary: #F5F5F5;
+  --text-secondary: #A1A1AA;
+  --text-muted: #737373;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: var(--font-body), 'DM Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   min-height: 100vh;
+  letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
+
+h1, h2, h3, .font-display {
+  font-family: var(--font-display), 'Syne', sans-serif;
+  letter-spacing: -0.02em;
+}
+
+code, pre, .font-mono {
+  font-family: var(--font-mono), 'JetBrains Mono', monospace;
+}
+
+/* Custom dark scrollbars */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #262626;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #383838;
+}
+
+/* Custom interactive transitions */
+.transition-editorial {
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.text-gradient-orange {
+  background: linear-gradient(135deg, #FFC247 0%, #FF9D00 50%, #FF6A00 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
