@@ -116,11 +116,12 @@ export default function PlaygroundPage() {
     }
   };
 
-  const handleCreateSession = async () => {
-    if (!selectedEmployeeId) return;
+  const handleCreateSession = async (employeeId?: string) => {
+    const targetEmpId = employeeId || selectedEmployeeId;
+    if (!targetEmpId) return null;
     try {
       const newSession = await api.createPlaygroundSession({
-        ai_employee_id: selectedEmployeeId,
+        ai_employee_id: targetEmpId,
         session_name: `Snapshot: ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
         config_overrides: {
           system_prompt: systemPrompt,
@@ -131,11 +132,13 @@ export default function PlaygroundPage() {
           retrieval_mode: retrievalMode,
         },
       });
-      setSessions([newSession, ...sessions]);
+      setSessions((prev) => [newSession, ...prev]);
       setActiveSession(newSession);
       setMessages([]);
+      return newSession;
     } catch (err) {
       console.error('Failed to create session', err);
+      return null;
     }
   };
 
@@ -162,13 +165,17 @@ export default function PlaygroundPage() {
     e.preventDefault();
     if (!inputQuery.trim() || sending) return;
 
-    if (!activeSession) {
-      await handleCreateSession();
+    let targetSession = activeSession;
+    if (!targetSession) {
+      targetSession = await handleCreateSession();
     }
 
-    const currentSessionId = activeSession?.id;
-    if (!currentSessionId) return;
+    if (!targetSession?.id) {
+      alert('Please select an AI Employee or wait for session initialization.');
+      return;
+    }
 
+    const currentSessionId = targetSession.id;
     const query = inputQuery.trim();
     setInputQuery('');
     setSending(true);
@@ -179,6 +186,23 @@ export default function PlaygroundPage() {
       setSelectedMessage(res.assistant_message);
     } catch (err: any) {
       console.error('Failed to send playground message', err);
+      // Auto-heal if session was deleted/expired/not found on backend
+      const errMsg = err?.message || '';
+      if (errMsg.toLowerCase().includes('not found') || errMsg.includes('404')) {
+        console.info('Session not found on backend. Re-initializing playground session...');
+        try {
+          const freshSession = await handleCreateSession();
+          if (freshSession?.id) {
+            const retryRes = await api.sendPlaygroundMessage(freshSession.id, query);
+            setMessages((prev) => [...prev, retryRes.user_message, retryRes.assistant_message]);
+            setSelectedMessage(retryRes.assistant_message);
+            return;
+          }
+        } catch (retryErr: any) {
+          alert(retryErr.message || 'Error executing playground turn.');
+          return;
+        }
+      }
       alert(err.message || 'Error processing request');
     } finally {
       setSending(false);

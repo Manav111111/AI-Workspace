@@ -33,13 +33,13 @@ async def run_evaluation(
     session: AsyncSession = Depends(get_db),
 ) -> EvaluationDetailResponse:
     """Trigger an automated RAG evaluation benchmark run against the tenant's AI Employee."""
-    # Tenant-level evaluation rate limit (fail-closed to protect expensive LLM judge quota)
+    # Tenant-level evaluation rate limit (fail_open_with_local fallback to thread-safe in-memory sliding window)
     distributed_rate_limiter.check_limit(
         key=f"rl:eval:run:{tenant.company_id}",
         max_requests=settings.RATE_LIMIT_EVALUATION_RUN_PER_HOUR,
         window_seconds=3600,
         action_name="evaluation benchmark run",
-        fail_mode="fail_closed",
+        fail_mode="fail_open_with_local",
     )
 
     # Load dataset

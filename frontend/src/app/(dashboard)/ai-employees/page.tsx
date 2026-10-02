@@ -30,6 +30,11 @@ import {
   Eye,
   User,
   Sparkles,
+  ChevronRight,
+  ChevronLeft,
+  Sliders,
+  Cpu,
+  FileText,
 } from 'lucide-react';
 import PageHeader from '@/components/ui/PageHeader';
 import Button from '@/components/ui/Button';
@@ -50,6 +55,7 @@ export default function AIEmployeesPage() {
   const [editingEmployee, setEditingEmployee] = useState<AIEmployee | null>(null);
 
   // Form State
+  const [wizardStep, setWizardStep] = useState<number>(1);
   const [name, setName] = useState('');
   const [role, setRole] = useState('');
   const [description, setDescription] = useState('');
@@ -59,15 +65,16 @@ export default function AIEmployeesPage() {
   const [status, setStatus] = useState<AIEmployeeStatus>('DRAFT');
   const [selectedKbIds, setSelectedKbIds] = useState<string[]>([]);
   const [selectedToolNames, setSelectedToolNames] = useState<string[]>([]);
+  const [aiModel, setAiModel] = useState('gemini-3.5-flash');
+  const [temperature, setTemperature] = useState(0.2);
+  const [topK, setTopK] = useState(5);
 
-  // Voice Configuration Form State
-  const [voiceEnabled, setVoiceEnabled] = useState(true);
+  // Voice & Avatar legacy compatibility fields (Defaulted safely without cluttering UI)
+  const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [voiceId, setVoiceId] = useState('alloy');
   const [voiceSpeed, setVoiceSpeed] = useState(1.0);
   const [availableVoices, setAvailableVoices] = useState<import('@/types').VoiceDefinition[]>([]);
-
-  // 3D Avatar Configuration Form State
-  const [avatarEnabled, setAvatarEnabled] = useState(true);
+  const [avatarEnabled, setAvatarEnabled] = useState(false);
   const [avatarPreset, setAvatarPreset] = useState('executive_sarah');
   const [avatarExpression, setAvatarExpression] = useState('approachable');
   const [avatarFraming, setAvatarFraming] = useState('bust');
@@ -124,22 +131,21 @@ export default function AIEmployeesPage() {
     setEditingEmployee(null);
     setError(null);
     setModalError(null);
+    setWizardStep(1);
     setName('');
     setRole('');
     setDescription('');
-    setPersonality('');
-    setSystemPrompt('');
+    setPersonality('Professional, authoritative, empathetic, concise');
+    setSystemPrompt('You are an enterprise AI Employee. Answer user questions grounded strictly in retrieved knowledge base documentation. Always include accurate citations.');
     setLanguage('en');
     setStatus('DRAFT');
     setSelectedKbIds([]);
     setSelectedToolNames(['product_search', 'order_lookup']);
-    setVoiceEnabled(true);
-    setVoiceId(availableVoices.length > 0 ? availableVoices[0].id : 'alloy');
-    setVoiceSpeed(1.0);
-    setAvatarEnabled(true);
-    setAvatarPreset('executive_sarah');
-    setAvatarExpression('approachable');
-    setAvatarFraming('bust');
+    setAiModel('gemini-3.5-flash');
+    setTemperature(0.2);
+    setTopK(5);
+    setVoiceEnabled(false);
+    setAvatarEnabled(false);
     setIsModalOpen(true);
   };
 
@@ -147,6 +153,7 @@ export default function AIEmployeesPage() {
     setEditingEmployee(emp);
     setError(null);
     setModalError(null);
+    setWizardStep(1);
     setName(emp.name);
     setRole(emp.role);
     setDescription(emp.description || '');
@@ -162,17 +169,11 @@ export default function AIEmployeesPage() {
       emp.tool_names ||
       (emp.assigned_tools ? emp.assigned_tools.map((t) => t.tool_name) : []);
     setSelectedToolNames(assignedToolList);
-
-    const vConfig = emp.voice_config || {};
-    setVoiceEnabled(vConfig.enabled !== false);
-    setVoiceId(vConfig.voice_id || (availableVoices.length > 0 ? availableVoices[0].id : 'alloy'));
-    setVoiceSpeed(typeof vConfig.speed === 'number' ? vConfig.speed : 1.0);
-
-    const aConfig = emp.avatar_config || {};
-    setAvatarEnabled(aConfig.enabled !== false);
-    setAvatarPreset(aConfig.model_preset || aConfig.preset || 'executive_sarah');
-    setAvatarExpression(aConfig.expression || 'approachable');
-    setAvatarFraming(aConfig.framing || 'bust');
+    setAiModel('gemini-3.5-flash');
+    setTemperature(0.2);
+    setTopK(5);
+    setVoiceEnabled(false);
+    setAvatarEnabled(false);
     setIsModalOpen(true);
   };
 
@@ -204,8 +205,21 @@ export default function AIEmployeesPage() {
     setSelectedToolNames([]);
   };
 
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleNextStep = () => {
+    setModalError(null);
+    if (wizardStep === 1) {
+      if (!name.trim() || !role.trim()) {
+        setModalError('Please enter both Employee Name and Role to continue.');
+        return;
+      }
+    }
+    if (wizardStep < 6) {
+      setWizardStep((prev) => prev + 1);
+    }
+  };
+
+  const handleSave = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     setError(null);
     setModalError(null);
     setSuccess(null);
@@ -215,6 +229,7 @@ export default function AIEmployeesPage() {
 
     if (!trimmedName || !trimmedRole) {
       setModalError('Please enter both Employee Name and Role.');
+      setWizardStep(1);
       return;
     }
 
@@ -605,463 +620,517 @@ export default function AIEmployeesPage() {
         </div>
       )}
 
-      {/* Create / Edit Modal */}
+      {/* Create / Edit Modal (Clean Chat-First 6-Step Wizard) */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#101010] border border-[#262626] rounded-xl w-full max-w-2xl p-6 shadow-card max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-4 border-b border-[#262626]">
-              <h2 className="text-base font-display font-bold text-[#F5F5F5] flex items-center gap-2">
-                <Bot className="w-4 h-4 text-[#FF9D00]" />
-                <span>{editingEmployee ? 'Edit AI Employee' : 'Create AI Employee'}</span>
-              </h2>
+          <div className="bg-[#101010] border border-[#262626] rounded-xl w-full max-w-2xl p-6 shadow-card max-h-[92vh] flex flex-col">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-[#262626] shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-[#151515] border border-[#262626] text-[#FF9D00] flex items-center justify-center">
+                  <Bot className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-base font-display font-bold text-[#F5F5F5] flex items-center gap-2">
+                    <span>{editingEmployee ? 'Edit AI Employee' : 'Create AI Employee'}</span>
+                    <Badge variant="orange">Chatbot-First</Badge>
+                  </h2>
+                  <p className="text-xs text-[#737373]">
+                    Configure identity, grounded knowledge base retrieval, and safe agent tools.
+                  </p>
+                </div>
+              </div>
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="text-[#737373] hover:text-[#F5F5F5] p-1 rounded-lg hover:bg-[#151515] transition-editorial"
+                className="text-[#737373] hover:text-[#F5F5F5] p-1.5 rounded-lg hover:bg-[#151515] transition-editorial"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
+            {/* 6-Step Progress Bar Indicator */}
+            <div className="grid grid-cols-6 gap-1.5 mt-4 pb-3 border-b border-[#262626] shrink-0">
+              {[
+                { step: 1, label: 'Identity', icon: User },
+                { step: 2, label: 'Instructions', icon: FileText },
+                { step: 3, label: 'Knowledge', icon: BookOpen },
+                { step: 4, label: 'AI Model', icon: Cpu },
+                { step: 5, label: 'Tools', icon: Wrench },
+                { step: 6, label: 'Review', icon: CheckCircle2 },
+              ].map((s) => {
+                const isCurrent = wizardStep === s.step;
+                const isPast = wizardStep > s.step;
+                const StepIcon = s.icon;
+                return (
+                  <button
+                    key={s.step}
+                    type="button"
+                    onClick={() => {
+                      if (s.step < wizardStep || (name.trim() && role.trim())) {
+                        setWizardStep(s.step);
+                      }
+                    }}
+                    className={`p-2 rounded-lg text-left flex flex-col gap-1 transition-editorial ${
+                      isCurrent
+                        ? 'bg-orange-950/40 border border-[#FF9D00]/50 text-[#FFC247]'
+                        : isPast
+                        ? 'bg-[#151515] border border-[#262626] text-[#F5F5F5] hover:border-[#383838]'
+                        : 'bg-[#0B0B0B] border border-[#1A1A1A] text-[#52525B]'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-mono font-semibold">0{s.step}</span>
+                      <StepIcon className="w-3 h-3" />
+                    </div>
+                    <span className="text-[11px] font-medium leading-none truncate">{s.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
             {modalError && (
-              <div className="mt-4 p-3 rounded-lg bg-rose-950/60 border border-rose-800/50 flex items-center gap-2 text-rose-300 text-xs">
+              <div className="mt-3 p-3 rounded-lg bg-rose-950/60 border border-rose-800/50 flex items-center gap-2 text-rose-300 text-xs shrink-0">
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>{modalError}</span>
               </div>
             )}
 
-            <form onSubmit={handleSave} className="mt-4 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-[#A1A1AA] mb-1.5">
-                    Employee Name *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g. Maya, Alex"
-                    className="w-full px-3.5 py-2 bg-[#151515] border border-[#262626] rounded-lg text-xs text-[#F5F5F5] focus:outline-none focus:ring-1 focus:ring-[#FF9D00]/40 focus:border-[#FF9D00]"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-[#A1A1AA] mb-1.5">
-                    Role / Mandate *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={role}
-                    onChange={(e) => setRole(e.target.value)}
-                    placeholder="e.g. AI Customer Specialist, Technical Support"
-                    className="w-full px-3.5 py-2 bg-[#151515] border border-[#262626] rounded-lg text-xs text-[#F5F5F5] focus:outline-none focus:ring-1 focus:ring-[#FF9D00]/40 focus:border-[#FF9D00]"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-[#A1A1AA] mb-1.5">
-                  Description
-                </label>
-                <input
-                  type="text"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Mandate and primary function within the organization"
-                  className="w-full px-3.5 py-2 bg-[#151515] border border-[#262626] rounded-lg text-xs text-[#F5F5F5] focus:outline-none focus:ring-1 focus:ring-[#FF9D00]/40 focus:border-[#FF9D00]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-[#A1A1AA] mb-1.5">
-                  Personality &amp; Tone
-                </label>
-                <input
-                  type="text"
-                  value={personality}
-                  onChange={(e) => setPersonality(e.target.value)}
-                  placeholder="e.g. Professional, authoritative, empathetic, concise"
-                  className="w-full px-3.5 py-2 bg-[#151515] border border-[#262626] rounded-lg text-xs text-[#F5F5F5] focus:outline-none focus:ring-1 focus:ring-[#FF9D00]/40 focus:border-[#FF9D00]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-[#A1A1AA] mb-1.5">
-                  System Instructions (Prompt Directives)
-                </label>
-                <textarea
-                  rows={3}
-                  value={systemPrompt}
-                  onChange={(e) => setSystemPrompt(e.target.value)}
-                  placeholder="Define role behavioral boundaries and instructions..."
-                  className="w-full px-3.5 py-2 bg-[#151515] border border-[#262626] rounded-lg text-xs text-[#F5F5F5] focus:outline-none focus:ring-1 focus:ring-[#FF9D00]/40 focus:border-[#FF9D00] font-mono"
-                />
-              </div>
-
-              {/* KNOWLEDGE ACCESS CHECKLIST */}
-              <div className="p-4 rounded-lg bg-[#151515] border border-[#262626] space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-semibold text-[#F5F5F5] flex items-center gap-1.5">
-                    <BookOpen className="w-4 h-4 text-[#FF9D00]" />
-                    <span>Knowledge Access (Scoped Retrieval)</span>
-                  </label>
-                  {allKnowledgeBases.length > 0 && (
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={selectAllKbs}
-                        className="text-[11px] text-[#FF9D00] hover:text-[#FF6A00] font-semibold"
-                      >
-                        Select All
-                      </button>
-                      <span className="text-[#262626]">•</span>
-                      <button
-                        type="button"
-                        onClick={clearAllKbs}
-                        className="text-[11px] text-[#737373] hover:text-[#A1A1AA]"
-                      >
-                        Clear
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                <p className="text-[11px] text-[#737373]">
-                  Select which knowledge bases this AI Employee can retrieve from. Unselected knowledge will never be queried or leaked.
-                </p>
-
-                {allKnowledgeBases.length === 0 ? (
-                  <div className="text-center py-4 bg-[#101010] rounded-lg border border-dashed border-[#262626] text-xs text-[#737373]">
-                    No knowledge bases created yet.{' '}
-                    <Link href="/knowledge" className="text-[#FF9D00] hover:underline font-semibold">
-                      Create a Knowledge Base
-                    </Link>{' '}
-                    first.
-                  </div>
-                ) : (
-                  <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
-                    {allKnowledgeBases.map((kb) => {
-                      const isSelected = selectedKbIds.includes(kb.id);
-                      return (
-                        <div
-                          key={kb.id}
-                          onClick={() => toggleKbSelection(kb.id)}
-                          className={`flex items-center justify-between p-2.5 rounded-lg border cursor-pointer transition-editorial ${
-                            isSelected
-                              ? 'bg-orange-950/30 border-orange-600/50 text-white'
-                              : 'bg-[#101010] border-[#262626] text-[#A1A1AA] hover:border-[#383838]'
-                          }`}
-                        >
-                          <div className="flex items-center gap-2.5">
-                            {isSelected ? (
-                              <CheckSquare className="w-4 h-4 text-[#FF9D00] shrink-0" />
-                            ) : (
-                              <Square className="w-4 h-4 text-[#737373] shrink-0" />
-                            )}
-                            <div>
-                              <p className="text-xs font-semibold leading-tight">{kb.name}</p>
-                              {kb.description && (
-                                <p className="text-[10px] text-[#737373] line-clamp-1">
-                                  {kb.description}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                          <Badge variant={isSelected ? 'orange' : 'outline'}>
-                            {isSelected ? 'Granted' : 'No Access'}
-                          </Badge>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              {/* TOOL CAPABILITIES ACCESS CHECKLIST */}
-              <div className="p-4 rounded-lg bg-[#151515] border border-[#262626] space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-semibold text-[#F5F5F5] flex items-center gap-1.5">
-                    <Wrench className="w-4 h-4 text-[#FF9D00]" />
-                    <span>Agent Tools (Execution Boundary)</span>
-                  </label>
-                  {allTools.length > 0 && (
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={selectAllTools}
-                        className="text-[11px] text-[#FF9D00] hover:text-[#FF6A00] font-semibold"
-                      >
-                        Select All
-                      </button>
-                      <span className="text-[#262626]">•</span>
-                      <button
-                        type="button"
-                        onClick={clearAllTools}
-                        className="text-[11px] text-[#737373] hover:text-[#A1A1AA]"
-                      >
-                        Clear
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                <p className="text-[11px] text-[#737373]">
-                  Select tools this employee can execute. READ actions run automatically; WRITE actions require explicit human confirmation.
-                </p>
-
-                {allTools.length === 0 ? (
-                  <div className="text-center py-3 bg-[#101010] rounded-lg border border-dashed border-[#262626] text-xs text-[#737373]">
-                    No tools registered.
-                  </div>
-                ) : (
-                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                    {allTools.map((t) => {
-                      const isSelected = selectedToolNames.includes(t.name);
-                      const isWrite = t.permission === 'WRITE';
-                      return (
-                        <div
-                          key={t.name}
-                          onClick={() => toggleToolSelection(t.name)}
-                          className={`flex items-start justify-between p-2.5 rounded-lg border cursor-pointer transition-editorial ${
-                            isSelected
-                              ? 'bg-orange-950/30 border-orange-600/50 text-white'
-                              : 'bg-[#101010] border-[#262626] text-[#A1A1AA] hover:border-[#383838]'
-                          }`}
-                        >
-                          <div className="flex items-start gap-2.5">
-                            {isSelected ? (
-                              <CheckSquare className="w-4 h-4 text-[#FF9D00] shrink-0 mt-0.5" />
-                            ) : (
-                              <Square className="w-4 h-4 text-[#737373] shrink-0 mt-0.5" />
-                            )}
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <p className="text-xs font-mono font-semibold text-[#FFC247]">{t.name}</p>
-                                <Badge variant={isWrite ? 'orange' : 'neutral'}>
-                                  {isWrite ? 'Write (Confirmation)' : 'Read (Auto)'}
-                                </Badge>
-                              </div>
-                              <p className="text-[10px] text-[#737373] mt-0.5 leading-snug">
-                                {t.description}
-                              </p>
-                            </div>
-                          </div>
-                          <Badge variant={isSelected ? 'orange' : 'outline'}>
-                            {isSelected ? 'Enabled' : 'Disabled'}
-                          </Badge>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              {/* VOICE AI CONFIGURATION */}
-              <div className="p-4 rounded-lg bg-[#151515] border border-[#262626] space-y-3">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-semibold text-[#F5F5F5] flex items-center gap-1.5">
-                    <Volume2 className="w-4 h-4 text-[#FF9D00]" />
-                    <span>Voice AI Interface (STT &amp; TTS)</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={voiceEnabled}
-                      onChange={(e) => setVoiceEnabled(e.target.checked)}
-                      className="sr-only"
-                    />
-                    <div className={`w-8 h-4 rounded-full transition-colors relative ${voiceEnabled ? 'bg-[#FF9D00]' : 'bg-[#262626]'}`}>
-                      <div className={`w-3 h-3 rounded-full bg-black absolute top-0.5 transition-transform ${voiceEnabled ? 'left-4.5' : 'left-0.5'}`} />
-                    </div>
-                    <span className="text-[11px] text-[#A1A1AA] font-medium">
-                      {voiceEnabled ? 'Enabled' : 'Disabled'}
-                    </span>
-                  </label>
-                </div>
-
-                <p className="text-[11px] text-[#737373]">
-                  Enables real-time bidirectional voice conversations via widget using the identical AI Employee brain, knowledge bases, and tools.
-                </p>
-
-                {voiceEnabled && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+            {/* Modal Body / Step Form */}
+            <div className="mt-4 flex-1 overflow-y-auto pr-1 space-y-4">
+              {/* STEP 1: IDENTITY */}
+              {wizardStep === 1 && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-[11px] font-semibold text-[#A1A1AA] mb-1">
-                        Synthesized Voice
-                      </label>
-                      <select
-                        value={voiceId}
-                        onChange={(e) => setVoiceId(e.target.value)}
-                        className="w-full px-3 py-1.5 bg-[#101010] border border-[#262626] rounded-lg text-xs text-white focus:outline-none focus:ring-1 focus:ring-[#FF9D00]/40"
-                      >
-                        {availableVoices.length > 0 ? (
-                          availableVoices.map((v) => (
-                            <option key={v.id} value={v.id}>
-                              {v.name} ({v.gender || 'neutral'})
-                            </option>
-                          ))
-                        ) : (
-                          <>
-                            <option value="alloy">Alloy (neutral)</option>
-                            <option value="echo">Echo (male)</option>
-                            <option value="fable">Fable (female)</option>
-                            <option value="onyx">Onyx (male)</option>
-                            <option value="nova">Nova (female)</option>
-                            <option value="shimmer">Shimmer (female)</option>
-                          </>
-                        )}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-[11px] font-semibold text-[#A1A1AA] mb-1">
-                        Speech Rate ({voiceSpeed}x)
+                      <label className="block text-xs font-semibold text-[#A1A1AA] mb-1.5">
+                        Employee Name *
                       </label>
                       <input
-                        type="range"
-                        min="0.8"
-                        max="1.2"
-                        step="0.05"
-                        value={voiceSpeed}
-                        onChange={(e) => setVoiceSpeed(parseFloat(e.target.value))}
-                        className="w-full accent-[#FF9D00] cursor-pointer mt-1"
+                        type="text"
+                        required
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        placeholder="e.g. Sam, Maya, Alex"
+                        className="w-full px-3.5 py-2 bg-[#151515] border border-[#262626] rounded-lg text-xs text-[#F5F5F5] focus:outline-none focus:ring-1 focus:ring-[#FF9D00]/40 focus:border-[#FF9D00]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-[#A1A1AA] mb-1.5">
+                        Role / Mandate *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={role}
+                        onChange={(e) => setRole(e.target.value)}
+                        placeholder="e.g. AI Customer Specialist, HR Assistant"
+                        className="w-full px-3.5 py-2 bg-[#151515] border border-[#262626] rounded-lg text-xs text-[#F5F5F5] focus:outline-none focus:ring-1 focus:ring-[#FF9D00]/40 focus:border-[#FF9D00]"
                       />
                     </div>
                   </div>
-                )}
-              </div>
 
-              {/* 3D DIGITAL HUMAN AVATAR CONFIGURATION */}
-              <div className="p-4 rounded-lg bg-[#151515] border border-[#262626] space-y-3">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-semibold text-[#F5F5F5] flex items-center gap-1.5">
-                    <User className="w-4 h-4 text-[#FF9D00]" />
-                    <span>3D Digital Human Avatar (Embodied AI)</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
+                  <div>
+                    <label className="block text-xs font-semibold text-[#A1A1AA] mb-1.5">
+                      Description
+                    </label>
                     <input
-                      type="checkbox"
-                      checked={avatarEnabled}
-                      onChange={(e) => setAvatarEnabled(e.target.checked)}
-                      className="sr-only"
+                      type="text"
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      placeholder="Mandate and primary function within the organization"
+                      className="w-full px-3.5 py-2 bg-[#151515] border border-[#262626] rounded-lg text-xs text-[#F5F5F5] focus:outline-none focus:ring-1 focus:ring-[#FF9D00]/40 focus:border-[#FF9D00]"
                     />
-                    <div className={`w-8 h-4 rounded-full transition-colors relative ${avatarEnabled ? 'bg-[#FF9D00]' : 'bg-[#262626]'}`}>
-                      <div className={`w-3 h-3 rounded-full bg-black absolute top-0.5 transition-transform ${avatarEnabled ? 'left-4.5' : 'left-0.5'}`} />
-                    </div>
-                    <span className="text-[11px] text-[#A1A1AA] font-medium">
-                      {avatarEnabled ? 'Enabled' : 'Disabled'}
-                    </span>
-                  </label>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-[#A1A1AA] mb-1.5">
+                      Primary Language
+                    </label>
+                    <select
+                      value={language}
+                      onChange={(e) => setLanguage(e.target.value)}
+                      className="w-full px-3 py-2 bg-[#151515] border border-[#262626] rounded-lg text-xs text-[#F5F5F5] focus:outline-none focus:ring-1 focus:ring-[#FF9D00]/40"
+                    >
+                      <option value="en">English (en)</option>
+                      <option value="es">Spanish (es)</option>
+                      <option value="fr">French (fr)</option>
+                      <option value="de">German (de)</option>
+                      <option value="hi">Hindi (hi)</option>
+                    </select>
+                  </div>
                 </div>
+              )}
 
-                <p className="text-[11px] text-[#737373]">
-                  Renders an interactive WebGL 3D humanoid avatar driven by the unified AI Employee Brain and Voice Runtime with ARKit-grade blendshapes.
-                </p>
+              {/* STEP 2: INSTRUCTIONS */}
+              {wizardStep === 2 && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-[#A1A1AA] mb-1.5">
+                      Personality &amp; Tone
+                    </label>
+                    <input
+                      type="text"
+                      value={personality}
+                      onChange={(e) => setPersonality(e.target.value)}
+                      placeholder="e.g. Professional, authoritative, empathetic, concise"
+                      className="w-full px-3.5 py-2 bg-[#151515] border border-[#262626] rounded-lg text-xs text-[#F5F5F5] focus:outline-none focus:ring-1 focus:ring-[#FF9D00]/40 focus:border-[#FF9D00]"
+                    />
+                  </div>
 
-                {avatarEnabled && (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+                  <div>
+                    <label className="block text-xs font-semibold text-[#A1A1AA] mb-1.5">
+                      System Instructions (Prompt Directives)
+                    </label>
+                    <textarea
+                      rows={6}
+                      value={systemPrompt}
+                      onChange={(e) => setSystemPrompt(e.target.value)}
+                      placeholder="Define role behavioral boundaries, knowledge grounding rules, and fallback behavior..."
+                      className="w-full px-3.5 py-2 bg-[#151515] border border-[#262626] rounded-lg text-xs text-[#F5F5F5] focus:outline-none focus:ring-1 focus:ring-[#FF9D00]/40 focus:border-[#FF9D00] font-mono leading-relaxed"
+                    />
+                    <p className="mt-1.5 text-[11px] text-[#737373]">
+                      Retrieved company knowledge will be injected as grounded context with prompt injection resistance.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 3: KNOWLEDGE */}
+              {wizardStep === 3 && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
                     <div>
-                      <label className="block text-[11px] font-semibold text-[#A1A1AA] mb-1">
-                        Avatar Model Rig
-                      </label>
-                      <select
-                        value={avatarPreset}
-                        onChange={(e) => setAvatarPreset(e.target.value)}
-                        className="w-full px-3 py-1.5 bg-[#101010] border border-[#262626] rounded-lg text-xs text-white focus:outline-none focus:ring-1 focus:ring-[#FF9D00]/40"
-                      >
-                        <option value="executive_sarah">Executive Sarah (Female Rig)</option>
-                        <option value="technical_david">Technical David (Male Rig)</option>
-                        <option value="support_alex">Support Alex (Neutral Rig)</option>
-                      </select>
+                      <h3 className="text-xs font-semibold text-[#F5F5F5]">
+                        Scoped Knowledge Base Access
+                      </h3>
+                      <p className="text-[11px] text-[#737373]">
+                        Select which knowledge collections this employee can retrieve from. Unselected knowledge is strictly isolated.
+                      </p>
                     </div>
+                    {allKnowledgeBases.length > 0 && (
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={selectAllKbs}
+                          className="text-[11px] text-[#FF9D00] hover:text-[#FF6A00] font-semibold"
+                        >
+                          Select All
+                        </button>
+                        <span className="text-[#262626]">•</span>
+                        <button
+                          type="button"
+                          onClick={clearAllKbs}
+                          className="text-[11px] text-[#737373] hover:text-[#A1A1AA]"
+                        >
+                          Clear
+                        </button>
+                      </div>
+                    )}
+                  </div>
 
-                    <div>
-                      <label className="block text-[11px] font-semibold text-[#A1A1AA] mb-1">
-                        Baseline Persona
-                      </label>
-                      <select
-                        value={avatarExpression}
-                        onChange={(e) => setAvatarExpression(e.target.value)}
-                        className="w-full px-3 py-1.5 bg-[#101010] border border-[#262626] rounded-lg text-xs text-white focus:outline-none focus:ring-1 focus:ring-[#FF9D00]/40"
-                      >
-                        <option value="approachable">Approachable (Warm Smile)</option>
-                        <option value="professional">Professional (Neutral Focus)</option>
-                        <option value="empathetic">Empathetic (Attentive Tilt)</option>
-                      </select>
+                  {allKnowledgeBases.length === 0 ? (
+                    <div className="text-center py-6 bg-[#151515] rounded-xl border border-dashed border-[#262626] text-xs text-[#737373]">
+                      No knowledge bases created yet.{' '}
+                      <Link href="/knowledge" className="text-[#FF9D00] hover:underline font-semibold">
+                        Create a Knowledge Base
+                      </Link>{' '}
+                      to ground this AI Employee.
                     </div>
+                  ) : (
+                    <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                      {allKnowledgeBases.map((kb) => {
+                        const isSelected = selectedKbIds.includes(kb.id);
+                        return (
+                          <div
+                            key={kb.id}
+                            onClick={() => toggleKbSelection(kb.id)}
+                            className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-editorial ${
+                              isSelected
+                                ? 'bg-orange-950/30 border-orange-600/50 text-white'
+                                : 'bg-[#151515] border-[#262626] text-[#A1A1AA] hover:border-[#383838]'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              {isSelected ? (
+                                <CheckSquare className="w-4 h-4 text-[#FF9D00] shrink-0" />
+                              ) : (
+                                <Square className="w-4 h-4 text-[#737373] shrink-0" />
+                              )}
+                              <div>
+                                <p className="text-xs font-semibold leading-tight">{kb.name}</p>
+                                {kb.description && (
+                                  <p className="text-[11px] text-[#737373] line-clamp-1 mt-0.5">
+                                    {kb.description}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                            <Badge variant={isSelected ? 'orange' : 'outline'}>
+                              {isSelected ? 'Granted' : 'No Access'}
+                            </Badge>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
 
-                    <div>
-                      <label className="block text-[11px] font-semibold text-[#A1A1AA] mb-1">
-                        Camera Framing
+              {/* STEP 4: AI MODEL CONFIGURATION */}
+              {wizardStep === 4 && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-[#A1A1AA] mb-1.5">
+                      LLM Generation Model
+                    </label>
+                    <select
+                      value={aiModel}
+                      onChange={(e) => setAiModel(e.target.value)}
+                      className="w-full px-3.5 py-2 bg-[#151515] border border-[#262626] rounded-lg text-xs text-[#F5F5F5] focus:outline-none focus:ring-1 focus:ring-[#FF9D00]/40"
+                    >
+                      <option value="gemini-3.5-flash">Google Gemini 3.5 Flash (Production Default — Fast &amp; Grounded)</option>
+                      <option value="gemini-3.6-flash">Google Gemini 3.6 Flash (High Throughput)</option>
+                      <option value="gpt-4o">OpenAI GPT-4o (Omni Reasoning)</option>
+                      <option value="claude-3-5-sonnet">Anthropic Claude 3.5 Sonnet (Nuanced Analysis)</option>
+                    </select>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-[#151515] border border-[#262626] space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-semibold text-[#F5F5F5]">
+                        Temperature ({temperature})
                       </label>
-                      <select
-                        value={avatarFraming}
-                        onChange={(e) => setAvatarFraming(e.target.value)}
-                        className="w-full px-3 py-1.5 bg-[#101010] border border-[#262626] rounded-lg text-xs text-white focus:outline-none focus:ring-1 focus:ring-[#FF9D00]/40"
-                      >
-                        <option value="bust">Bust (Chest &amp; Head)</option>
-                        <option value="close_up">Close-up (Face Only)</option>
-                        <option value="half_body">Half-Body (Waist Up)</option>
-                      </select>
+                      <span className="text-[11px] text-[#737373]">
+                        {temperature <= 0.3 ? 'Deterministic & Grounded' : temperature <= 0.7 ? 'Balanced' : 'Creative'}
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0.0"
+                      max="1.0"
+                      step="0.05"
+                      value={temperature}
+                      onChange={(e) => setTemperature(parseFloat(e.target.value))}
+                      className="w-full accent-[#FF9D00] cursor-pointer"
+                    />
+                    <div className="flex justify-between text-[10px] text-[#737373] font-mono">
+                      <span>0.0 (Strict Grounding)</span>
+                      <span>0.5</span>
+                      <span>1.0 (Creative)</span>
                     </div>
                   </div>
+
+                  <div className="p-4 rounded-xl bg-[#151515] border border-[#262626] space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-semibold text-[#F5F5F5]">
+                        Retrieval Top-K Chunks ({topK})
+                      </label>
+                      <span className="text-[11px] text-[#737373]">
+                        Maximum relevant chunks retrieved per turn
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min="1"
+                      max="10"
+                      step="1"
+                      value={topK}
+                      onChange={(e) => setTopK(parseInt(e.target.value))}
+                      className="w-full accent-[#FF9D00] cursor-pointer"
+                    />
+                    <div className="flex justify-between text-[10px] text-[#737373] font-mono">
+                      <span>1 Chunk</span>
+                      <span>5 Chunks (Recommended)</span>
+                      <span>10 Chunks</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 5: TOOLS & GOVERNANCE */}
+              {wizardStep === 5 && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-xs font-semibold text-[#F5F5F5]">
+                        Agent Tools &amp; Action Permissions
+                      </h3>
+                      <p className="text-[11px] text-[#737373]">
+                        READ tools execute automatically; WRITE tools require human approval.
+                      </p>
+                    </div>
+                    {allTools.length > 0 && (
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={selectAllTools}
+                          className="text-[11px] text-[#FF9D00] hover:text-[#FF6A00] font-semibold"
+                        >
+                          Select All
+                        </button>
+                        <span className="text-[#262626]">•</span>
+                        <button
+                          type="button"
+                          onClick={clearAllTools}
+                          className="text-[11px] text-[#737373] hover:text-[#A1A1AA]"
+                        >
+                          Clear
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {allTools.length === 0 ? (
+                    <div className="text-center py-6 bg-[#151515] rounded-xl border border-dashed border-[#262626] text-xs text-[#737373]">
+                      No tools registered. AI Employee will operate in pure Q&amp;A retrieval mode.
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                      {allTools.map((t) => {
+                        const isSelected = selectedToolNames.includes(t.name);
+                        const isWrite = t.permission === 'WRITE';
+                        return (
+                          <div
+                            key={t.name}
+                            onClick={() => toggleToolSelection(t.name)}
+                            className={`flex items-start justify-between p-3 rounded-lg border cursor-pointer transition-editorial ${
+                              isSelected
+                                ? 'bg-orange-950/30 border-orange-600/50 text-white'
+                                : 'bg-[#151515] border-[#262626] text-[#A1A1AA] hover:border-[#383838]'
+                            }`}
+                          >
+                            <div className="flex items-start gap-3">
+                              {isSelected ? (
+                                <CheckSquare className="w-4 h-4 text-[#FF9D00] shrink-0 mt-0.5" />
+                              ) : (
+                                <Square className="w-4 h-4 text-[#737373] shrink-0 mt-0.5" />
+                              )}
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <p className="text-xs font-mono font-semibold text-[#FFC247]">{t.name}</p>
+                                  <Badge variant={isWrite ? 'orange' : 'neutral'}>
+                                    {isWrite ? 'Write (Confirmation)' : 'Read (Auto)'}
+                                  </Badge>
+                                </div>
+                                <p className="text-[11px] text-[#737373] mt-0.5 leading-snug">
+                                  {t.description}
+                                </p>
+                              </div>
+                            </div>
+                            <Badge variant={isSelected ? 'orange' : 'outline'}>
+                              {isSelected ? 'Enabled' : 'Disabled'}
+                            </Badge>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* STEP 6: REVIEW & LAUNCH */}
+              {wizardStep === 6 && (
+                <div className="space-y-4">
+                  <div className="p-4 rounded-xl bg-[#151515] border border-[#262626] space-y-3">
+                    <h3 className="text-xs font-semibold text-[#F5F5F5] flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-[#FF9D00]" />
+                      <span>AI Employee Configuration Summary</span>
+                    </h3>
+
+                    <div className="grid grid-cols-2 gap-3 text-xs pt-1">
+                      <div>
+                        <span className="text-[#737373] block text-[11px]">Name:</span>
+                        <span className="text-[#F5F5F5] font-semibold">{name || '—'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[#737373] block text-[11px]">Role:</span>
+                        <span className="text-[#FF9D00] font-mono">{role || '—'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[#737373] block text-[11px]">Model:</span>
+                        <span className="text-[#F5F5F5] font-mono">{aiModel}</span>
+                      </div>
+                      <div>
+                        <span className="text-[#737373] block text-[11px]">Temperature:</span>
+                        <span className="text-[#F5F5F5] font-mono">{temperature}</span>
+                      </div>
+                      <div>
+                        <span className="text-[#737373] block text-[11px]">Assigned Knowledge Bases:</span>
+                        <span className="text-[#F5F5F5] font-semibold">{selectedKbIds.length} collections</span>
+                      </div>
+                      <div>
+                        <span className="text-[#737373] block text-[11px]">Enabled Tools:</span>
+                        <span className="text-[#F5F5F5] font-semibold">{selectedToolNames.length} tools</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-[#A1A1AA] mb-1.5">
+                      Deployment Status
+                    </label>
+                    <select
+                      value={status}
+                      onChange={(e) => setStatus(e.target.value as AIEmployeeStatus)}
+                      className="w-full px-3.5 py-2 bg-[#151515] border border-[#262626] rounded-lg text-xs text-[#F5F5F5] focus:outline-none focus:ring-1 focus:ring-[#FF9D00]/40"
+                    >
+                      <option value="DRAFT">Draft (Internal Testing)</option>
+                      <option value="ACTIVE">Active (Live Deployment)</option>
+                      <option value="INACTIVE">Inactive (Disabled)</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer Controls */}
+            <div className="flex items-center justify-between pt-4 border-t border-[#262626] mt-4 shrink-0">
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                disabled={isSavingEmployee}
+                onClick={() => setIsModalOpen(false)}
+              >
+                Cancel
+              </Button>
+
+              <div className="flex items-center gap-2">
+                {wizardStep > 1 && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    icon={ChevronLeft}
+                    onClick={() => setWizardStep((prev) => Math.max(1, prev - 1))}
+                  >
+                    Back
+                  </Button>
+                )}
+
+                {wizardStep < 6 ? (
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    icon={ChevronRight}
+                    onClick={handleNextStep}
+                  >
+                    Continue
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    loading={isSavingEmployee}
+                    onClick={() => handleSave()}
+                  >
+                    {editingEmployee ? 'Save Changes' : 'Create AI Employee'}
+                  </Button>
                 )}
               </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-[#A1A1AA] mb-1.5">
-                    Primary Language
-                  </label>
-                  <select
-                    value={language}
-                    onChange={(e) => setLanguage(e.target.value)}
-                    className="w-full px-3 py-2 bg-[#151515] border border-[#262626] rounded-lg text-xs text-[#F5F5F5] focus:outline-none focus:ring-1 focus:ring-[#FF9D00]/40"
-                  >
-                    <option value="en">English (en)</option>
-                    <option value="es">Spanish (es)</option>
-                    <option value="fr">French (fr)</option>
-                    <option value="de">German (de)</option>
-                    <option value="hi">Hindi (hi)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-[#A1A1AA] mb-1.5">
-                    Deployment Status
-                  </label>
-                  <select
-                    value={status}
-                    onChange={(e) => setStatus(e.target.value as AIEmployeeStatus)}
-                    className="w-full px-3 py-2 bg-[#151515] border border-[#262626] rounded-lg text-xs text-[#F5F5F5] focus:outline-none focus:ring-1 focus:ring-[#FF9D00]/40"
-                  >
-                    <option value="DRAFT">Draft</option>
-                    <option value="ACTIVE">Active</option>
-                    <option value="INACTIVE">Inactive</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#262626]">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  disabled={isSavingEmployee}
-                  onClick={() => setIsModalOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  variant="primary"
-                  size="sm"
-                  loading={isSavingEmployee}
-                >
-                  {editingEmployee ? 'Save Changes' : 'Create AI Employee'}
-                </Button>
-              </div>
-            </form>
+            </div>
           </div>
         </div>
       )}

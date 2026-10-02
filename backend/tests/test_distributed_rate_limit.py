@@ -3,6 +3,7 @@ import uuid
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.models.company import Company
 from app.models.membership import Membership, MembershipRole
 from app.models.user import User
@@ -108,8 +109,8 @@ async def test_evaluation_run_rate_limiting_enforcement(client: AsyncClient, db_
 
     # Consume all slots for evaluation runs for this tenant
     eval_key = f"rl:eval:run:{company.id}"
-    for _ in range(5):
-        distributed_rate_limiter.is_allowed(eval_key, max_requests=5, window_seconds=3600)
+    for _ in range(settings.RATE_LIMIT_EVALUATION_RUN_PER_HOUR):
+        distributed_rate_limiter.is_allowed(eval_key, max_requests=settings.RATE_LIMIT_EVALUATION_RUN_PER_HOUR, window_seconds=3600)
 
     # Next evaluation run must immediately return HTTP 429
     resp = await client.post(
