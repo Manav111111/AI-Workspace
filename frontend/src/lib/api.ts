@@ -23,7 +23,11 @@ const getApiBaseUrl = (): string => {
   if (!envUrl || envUrl.includes(':8001')) {
     return 'http://localhost:8000/api/v1';
   }
-  return envUrl;
+  const clean = envUrl.trim().replace(/\/+$/, '');
+  if (clean.endsWith('/api/v1')) {
+    return clean;
+  }
+  return `${clean}/api/v1`;
 };
 
 const API_BASE_URL = getApiBaseUrl();
