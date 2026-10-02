@@ -36,10 +36,11 @@ async def login(
 ) -> Dict[str, Any]:
     """Authenticate with email and password to receive a JWT access token."""
     auth_service = AuthService(session)
-    user, token = await auth_service.authenticate(data)
+    user, token, company = await auth_service.authenticate(data)
 
     return {
         "user": UserRead.model_validate(user),
+        "company": CompanyRead.model_validate(company) if company else None,
         "token": token,
     }
 

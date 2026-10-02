@@ -42,7 +42,7 @@ class AuthService:
         company = None
         if data.company_name and data.company_name.strip():
             c_name = data.company_name.strip()
-            base_slug = slugify(c_name)
+            base_slug = slugify(c_name) or "workspace"
             slug = base_slug
             counter = 1
             while await self.company_repo.get_by_slug(slug):
@@ -65,6 +65,8 @@ class AuthService:
 
         await self.session.commit()
         await self.session.refresh(user)
+        if company:
+            await self.session.refresh(company)
 
         token = Token(
             access_token=create_access_token(subject=str(user.id)),
@@ -72,7 +74,7 @@ class AuthService:
         )
         return user, token, company
 
-    async def authenticate(self, data: LoginRequest) -> Tuple[User, Token]:
+    async def authenticate(self, data: LoginRequest) -> Tuple[User, Token, Optional[Company]]:
         user = await self.user_repo.get_by_email(data.email)
         if not user or not verify_password(data.password, user.hashed_password):
             raise UnauthorizedException("Invalid email or password")
@@ -80,8 +82,13 @@ class AuthService:
         if not user.is_active:
             raise UnauthorizedException("User account is deactivated")
 
+        # Resolve user's primary company
+        memberships = await self.company_repo.get_user_memberships(user.id)
+        default_company = memberships[0].company if memberships else None
+
         token = Token(
             access_token=create_access_token(subject=str(user.id)),
             token_type="bearer",
         )
-        return user, token
+        return user, token, default_company
+

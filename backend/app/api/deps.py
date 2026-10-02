@@ -92,26 +92,48 @@ async def get_tenant_context(
 
     company_repo = CompanyRepository(session)
 
-    if not resolved_id:
-        # If no explicit company specified, default to user's first active company membership
+    if resolved_id:
+        membership = await company_repo.get_membership(
+            user_id=current_user.id,
+            company_id=resolved_id,
+        )
+        if not membership:
+            raise ForbiddenException("Access denied: You do not have membership in this company")
+    else:
+        # Default to user's first active company membership if none specified in request
         memberships = await company_repo.get_user_memberships(current_user.id)
-        if not memberships:
-            raise ForbiddenException("User does not belong to any active company")
-        membership = memberships[0]
-        company = membership.company
-        return TenantContext(user=current_user, company=company, membership=membership)
+        if memberships:
+            membership = memberships[0]
+        else:
+            # Auto-provision a default personal company workspace if user has none
+            from app.services.auth import slugify
+            base_name = f"{current_user.full_name or 'Personal'}'s Workspace"
+            base_slug = slugify(base_name) or "workspace"
+            slug = base_slug
+            counter = 1
+            while await company_repo.get_by_slug(slug):
+                slug = f"{base_slug}-{counter}"
+                counter += 1
 
-    # Validate that current_user has a valid membership in target resolved_id
-    membership = await company_repo.get_membership(
-        user_id=current_user.id,
-        company_id=resolved_id,
-    )
-    if not membership:
-        raise ForbiddenException("Access denied: You do not have membership in this company")
+            new_comp = Company(
+                id=uuid.uuid4(),
+                name=base_name,
+                slug=slug,
+                is_active=True,
+            )
+            await company_repo.create(new_comp)
+            membership = await company_repo.create_membership(
+                user_id=current_user.id,
+                company_id=new_comp.id,
+                role=MembershipRole.OWNER,
+            )
+            await session.commit()
+            await session.refresh(membership)
+            membership.company = new_comp
 
     company = membership.company
-    if not company.is_active:
-        raise ForbiddenException("Target company is inactive")
+    if not company or not company.is_active:
+        raise ForbiddenException("Target workspace is inactive or unavailable")
 
     return TenantContext(user=current_user, company=company, membership=membership)
 

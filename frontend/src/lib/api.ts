@@ -128,12 +128,31 @@ class ApiClient {
       method: 'POST',
       body: JSON.stringify(payload),
     });
-    this.setSession(res.token.access_token);
+    let companyId = res.company?.id;
+    if (!companyId && res.token?.access_token) {
+      try {
+        const me = await this.request<{ user: User; companies: { membership_id: string; role: string; company: Company }[] }>('/auth/me', {
+          headers: { Authorization: `Bearer ${res.token.access_token}` },
+        });
+        if (me?.companies && me.companies.length > 0 && me.companies[0]?.company?.id) {
+          companyId = me.companies[0].company.id;
+        }
+      } catch {}
+    }
+    this.setSession(res.token.access_token, companyId);
     return res;
   }
 
   async getMe(): Promise<{ user: User; companies: { membership_id: string; role: string; company: Company }[] }> {
-    return this.request('/auth/me');
+    const res = await this.request<{ user: User; companies: { membership_id: string; role: string; company: Company }[] }>('/auth/me');
+    if (typeof window !== 'undefined' && res?.companies && res.companies.length > 0) {
+      const currentCid = localStorage.getItem('active_company_id');
+      const validCompany = res.companies.find((c) => c.company?.id === currentCid);
+      if (!validCompany && res.companies[0]?.company?.id) {
+        localStorage.setItem('active_company_id', res.companies[0].company.id);
+      }
+    }
+    return res;
   }
 
   // Companies Endpoints

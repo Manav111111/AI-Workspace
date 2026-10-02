@@ -23,10 +23,10 @@ export default function SignupPage() {
 
     try {
       const res = await api.signup({
-        full_name: fullName,
-        email,
+        full_name: fullName.trim(),
+        email: email.trim(),
         password,
-        company_name: companyName,
+        company_name: companyName.trim() || `${fullName.trim() || 'Personal'}'s Workspace`,
       });
 
       if (res.company) {
