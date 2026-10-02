@@ -57,3 +57,25 @@ async def test_signup_and_login_flow(client: AsyncClient):
     assert len(me_data["companies"]) == 1
     assert me_data["companies"][0]["role"] == "OWNER"
     assert me_data["companies"][0]["company"]["name"] == "Company Alpha"
+
+
+@pytest.mark.asyncio
+async def test_demo_login_endpoint(client: AsyncClient):
+    # 1. 1-Click Demo Login
+    demo_res = await client.post("/api/v1/auth/demo-login")
+    assert demo_res.status_code == 200
+    data = demo_res.json()
+    assert data["user"]["email"] == "demo@avtaar.ai"
+    assert data["token"]["access_token"] is not None
+    assert data["company"] is not None
+
+    # 2. Login via standard /login endpoint with demo credentials
+    std_demo_res = await client.post(
+        "/api/v1/auth/login",
+        json={"email": "demo@avtaar.ai", "password": "Demo12345!"},
+    )
+    assert std_demo_res.status_code == 200
+    std_data = std_demo_res.json()
+    assert std_data["user"]["email"] == "demo@avtaar.ai"
+    assert std_data["token"]["access_token"] is not None
+

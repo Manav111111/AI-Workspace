@@ -45,6 +45,21 @@ async def login(
     }
 
 
+@router.post("/demo-login", response_model=Dict[str, Any])
+async def demo_login(
+    session: AsyncSession = Depends(get_db),
+) -> Dict[str, Any]:
+    """Instant 1-click demo login, provisioning demo workspace on demand."""
+    auth_service = AuthService(session)
+    user, token, company = await auth_service.demo_login()
+
+    return {
+        "user": UserRead.model_validate(user),
+        "company": CompanyRead.model_validate(company) if company else None,
+        "token": token,
+    }
+
+
 @router.get("/me", response_model=Dict[str, Any])
 async def get_me(
     current_user: User = Depends(get_current_user),

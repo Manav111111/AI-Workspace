@@ -291,3 +291,34 @@ class SeedService:
         await session.commit()
         logger.info(f"Demo account '{DEMO_EMAIL}' successfully created with company '{company.name}', 2 AI Employees (Maya & Alex), 2 Knowledge Bases, and demo order data.")
         return True
+
+    @classmethod
+    async def get_or_seed_demo_account(cls, session: AsyncSession):
+        """Gets or creates the demo account, guaranteeing that demo@avtaar.ai and its company exist."""
+        stmt = select(User).where(User.email == DEMO_EMAIL)
+        user = (await session.execute(stmt)).scalar_one_or_none()
+        if not user:
+            await cls.seed_demo_account(session)
+            stmt = select(User).where(User.email == DEMO_EMAIL)
+            user = (await session.execute(stmt)).scalar_one_or_none()
+        else:
+            # Ensure demo password matches DEMO_PASSWORD and user is active
+            user.hashed_password = get_password_hash(DEMO_PASSWORD)
+            user.is_active = True
+            await session.commit()
+            await session.refresh(user)
+
+        stmt_comp = select(Company).where(Company.slug == DEMO_COMPANY_SLUG)
+        company = (await session.execute(stmt_comp)).scalar_one_or_none()
+        if not company and user:
+            stmt_mem = (
+                select(Membership)
+                .where(Membership.user_id == user.id)
+            )
+            membership = (await session.execute(stmt_mem)).scalar_one_or_none()
+            if membership:
+                stmt_c = select(Company).where(Company.id == membership.company_id)
+                company = (await session.execute(stmt_c)).scalar_one_or_none()
+
+        return user, company
+

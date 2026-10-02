@@ -143,6 +143,29 @@ class ApiClient {
     return res;
   }
 
+  async demoLogin(): Promise<AuthResponse> {
+    try {
+      const res = await this.request<AuthResponse>('/auth/demo-login', {
+        method: 'POST',
+      });
+      let companyId = res.company?.id;
+      if (!companyId && res.token?.access_token) {
+        try {
+          const me = await this.request<{ user: User; companies: { membership_id: string; role: string; company: Company }[] }>('/auth/me', {
+            headers: { Authorization: `Bearer ${res.token.access_token}` },
+          });
+          if (me?.companies && me.companies.length > 0 && me.companies[0]?.company?.id) {
+            companyId = me.companies[0].company.id;
+          }
+        } catch {}
+      }
+      this.setSession(res.token.access_token, companyId);
+      return res;
+    } catch {
+      return this.login({ email: 'demo@avtaar.ai', password: 'Demo12345!' });
+    }
+  }
+
   async getMe(): Promise<{ user: User; companies: { membership_id: string; role: string; company: Company }[] }> {
     const res = await this.request<{ user: User; companies: { membership_id: string; role: string; company: Company }[] }>('/auth/me');
     if (typeof window !== 'undefined' && res?.companies && res.companies.length > 0) {

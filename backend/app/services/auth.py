@@ -75,7 +75,18 @@ class AuthService:
         return user, token, company
 
     async def authenticate(self, data: LoginRequest) -> Tuple[User, Token, Optional[Company]]:
-        user = await self.user_repo.get_by_email(data.email)
+        email_clean = data.email.lower().strip()
+        if email_clean == "demo@avtaar.ai":
+            from app.services.seed_service import DEMO_PASSWORD, SeedService
+            user, company = await SeedService.get_or_seed_demo_account(self.session)
+            if data.password in [DEMO_PASSWORD, "Demo12345!"] or verify_password(data.password, user.hashed_password):
+                token = Token(
+                    access_token=create_access_token(subject=str(user.id)),
+                    token_type="bearer",
+                )
+                return user, token, company
+
+        user = await self.user_repo.get_by_email(email_clean)
         if not user or not verify_password(data.password, user.hashed_password):
             raise UnauthorizedException("Invalid email or password")
 
@@ -91,4 +102,13 @@ class AuthService:
             token_type="bearer",
         )
         return user, token, default_company
+
+    async def demo_login(self) -> Tuple[User, Token, Optional[Company]]:
+        from app.services.seed_service import SeedService
+        user, company = await SeedService.get_or_seed_demo_account(self.session)
+        token = Token(
+            access_token=create_access_token(subject=str(user.id)),
+            token_type="bearer",
+        )
+        return user, token, company
 

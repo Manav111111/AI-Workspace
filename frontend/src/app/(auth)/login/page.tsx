@@ -40,11 +40,7 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
     try {
-      await api.login({ email: 'demo@avtaar.ai', password: 'Demo12345!' });
-      const profile = await api.getMe();
-      if (profile.companies.length > 0) {
-        localStorage.setItem('active_company_id', profile.companies[0].company.id);
-      }
+      await api.demoLogin();
       router.push('/dashboard');
     } catch (err: any) {
       setError(err.message || 'Demo login failed. Please retry in a moment.');
