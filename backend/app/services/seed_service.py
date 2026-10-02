@@ -8,7 +8,7 @@ from app.core.security import get_password_hash
 from app.models.ai_employee import AIEmployee, AIEmployeeStatus
 from app.models.ai_employee_knowledge_base import AIEmployeeKnowledgeBase
 from app.models.ai_employee_tool import AIEmployeeTool
-from app.models.business_entities import Order, OrderStatus, Product
+from app.models.business_entities import Order, OrderStatus
 from app.models.company import Company
 from app.models.document import Document, DocumentStatus
 from app.models.document_chunk import DocumentChunk
