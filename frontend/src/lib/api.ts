@@ -95,6 +95,10 @@ class ApiClient {
     }
 
     if (!response.ok) {
+      if (response.status === 401) {
+        // Clear stale local storage session if token is rejected or user not found
+        this.clearSession();
+      }
       const errMsg =
         data?.error?.message ||
         (Array.isArray(data?.error?.details)

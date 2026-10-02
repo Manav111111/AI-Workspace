@@ -25,26 +25,35 @@ async def lifespan(app: FastAPI):
     from app.services.invariants import validate_embedding_dimension_invariant
     validate_embedding_dimension_invariant()
     
-    # Initialize SQLite tables automatically if running local SQLite
-    if "sqlite" in settings.DATABASE_URL:
-        import app.models  # noqa: F401 - register all models with Base.metadata
-        from app.models.base import Base
+    # Initialize database tables automatically for all database backends
+    import app.models  # noqa: F401 - register all models with Base.metadata
+    from app.models.base import Base
 
-        def _sync_sqlite_schema(sync_conn):
-            for table_name, table in Base.metadata.tables.items():
-                res = sync_conn.execute(text(f"PRAGMA table_info({table_name})")).fetchall()
-                if not res:
-                    continue
-                existing_cols = {row[1] for row in res}
-                for col in table.columns:
-                    if col.name not in existing_cols:
-                        col_type = col.type.compile(sync_conn.dialect)
-                        sync_conn.execute(text(f"ALTER TABLE {table_name} ADD COLUMN {col.name} {col_type}"))
+    def _sync_sqlite_schema(sync_conn):
+        for table_name, table in Base.metadata.tables.items():
+            res = sync_conn.execute(text(f"PRAGMA table_info({table_name})")).fetchall()
+            if not res:
+                continue
+            existing_cols = {row[1] for row in res}
+            for col in table.columns:
+                if col.name not in existing_cols:
+                    col_type = col.type.compile(sync_conn.dialect)
+                    sync_conn.execute(text(f"ALTER TABLE {table_name} ADD COLUMN {col.name} {col_type}"))
 
-        async with async_engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
+    async with async_engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+        if "sqlite" in settings.DATABASE_URL:
             await conn.run_sync(_sync_sqlite_schema)
-        logger.info("SQLite local database tables and schema synchronized.")
+    logger.info("Database schema verified and synchronized.")
+
+    # Automatically seed the Demo Account & Knowledge Bases on startup
+    try:
+        from app.db.session import async_session_factory
+        from app.services.seed_service import SeedService
+        async with async_session_factory() as seed_db:
+            await SeedService.seed_demo_account(seed_db)
+    except Exception as se:
+        logger.warning(f"Could not complete automatic demo seeding on startup: {se}")
     
     # Recover any stale jobs from previous server crash
     try:

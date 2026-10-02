@@ -40,6 +40,23 @@ export default function SignupPage() {
     }
   };
 
+  const handleDemoLogin = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      await api.login({ email: 'demo@avtaar.ai', password: 'Demo12345!' });
+      const profile = await api.getMe();
+      if (profile.companies.length > 0) {
+        localStorage.setItem('active_company_id', profile.companies[0].company.id);
+      }
+      router.push('/dashboard');
+    } catch (err: any) {
+      setError(err.message || 'Demo login failed. Please retry in a moment.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#050505] flex flex-col justify-center items-center px-4 py-12 font-sans selection:bg-orange-950 selection:text-orange-300">
       <div className="max-w-md w-full">
@@ -52,6 +69,39 @@ export default function SignupPage() {
           <p className="mt-1 text-xs text-[#737373]">
             Provision an isolated multi-tenant workspace for your AI employees
           </p>
+        </div>
+
+        {/* Demo Account Quick Access Card */}
+        <div className="mb-4 p-4 rounded-xl bg-orange-950/30 border border-[#FF9D00]/40 shadow-card">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-xs font-semibold text-[#FFC247] flex items-center gap-1.5 font-display">
+              <span>⚡ Want to explore immediately?</span>
+            </span>
+            <span className="text-[10px] px-2 py-0.5 rounded bg-orange-900/60 text-orange-200 font-mono">
+              Demo Workspace
+            </span>
+          </div>
+          <p className="text-[11px] text-[#A1A1AA] mb-3 leading-relaxed">
+            Test Maya, Alex, live knowledge bases, and tools without creating a new company.
+          </p>
+          <button
+            type="button"
+            disabled={loading}
+            onClick={handleDemoLogin}
+            className="w-full py-2 px-3 bg-[#FF9D00] hover:bg-[#FF6A00] border border-[#FF9D00]/70 text-black text-xs font-semibold rounded-lg shadow-orange-sm transition-editorial flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <span>Entering Demo Workspace...</span>
+              </>
+            ) : (
+              <>
+                <span>1-Click Instant Demo Access</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </>
+            )}
+          </button>
         </div>
 
         {/* Card */}
